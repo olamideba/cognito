@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+venv/
+.venv/
+.env
+.env.*
+
+# Package distribution
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+
+# FastAPI specific
+instance/
+.settings/
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+pytest_cache/
+
+# Migrations (if using Alembic)
+migrations/
+
+# SQLite database (if used)
+*.sqlite3
+*.db
