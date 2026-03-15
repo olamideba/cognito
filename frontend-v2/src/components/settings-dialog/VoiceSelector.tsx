@@ -47,26 +47,8 @@ export default function VoiceSelector() {
       <label htmlFor="voice-selector">Voice</label>
       <Select
         id="voice-selector"
-        className="react-select"
+        className="react-select-brutalist"
         classNamePrefix="react-select"
-        styles={{
-          control: (baseStyles) => ({
-            ...baseStyles,
-            background: "var(--Neutral-15)",
-            color: "var(--Neutral-90)",
-            minHeight: "33px",
-            maxHeight: "33px",
-            border: 0,
-          }),
-          option: (styles, { isFocused, isSelected }) => ({
-            ...styles,
-            backgroundColor: isFocused
-              ? "var(--Neutral-30)"
-              : isSelected
-              ? "var(--Neutral-20)"
-              : undefined,
-          }),
-        }}
         value={selectedOption}
         defaultValue={selectedOption}
         options={voiceOptions}

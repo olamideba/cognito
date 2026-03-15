@@ -1,19 +1,3 @@
-/**
- * Copyright 2024 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import cn from "classnames";
 
 import { memo, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
@@ -22,8 +6,6 @@ import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
 import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
-import AudioPulse from "../audio-pulse/AudioPulse";
-import "./control-tray.scss";
 import SettingsDialog from "../settings-dialog/SettingsDialog";
 
 export type ControlTrayProps = {
@@ -33,30 +15,6 @@ export type ControlTrayProps = {
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
 };
-
-type MediaStreamButtonProps = {
-  isStreaming: boolean;
-  onIcon: string;
-  offIcon: string;
-  start: () => Promise<any>;
-  stop: () => any;
-};
-
-/**
- * button used for triggering webcam or screen-capture
- */
-const MediaStreamButton = memo(
-  ({ isStreaming, onIcon, offIcon, start, stop }: MediaStreamButtonProps) =>
-    isStreaming ? (
-      <button className="action-button" onClick={stop}>
-        <span className="material-symbols-outlined">{onIcon}</span>
-      </button>
-    ) : (
-      <button className="action-button" onClick={start}>
-        <span className="material-symbols-outlined">{offIcon}</span>
-      </button>
-    )
-);
 
 function ControlTray({
   videoRef,
@@ -75,7 +33,7 @@ function ControlTray({
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
   const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { client, connected, connect, disconnect, volume } =
+  const { client, connected, connect, disconnect } =
     useLiveAPIContext();
 
   useEffect(() => {
@@ -160,58 +118,57 @@ function ControlTray({
   };
 
   return (
-    <section className="control-tray">
+    <section className="control-tray-brutalist" style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
       <canvas style={{ display: "none" }} ref={renderCanvasRef} />
-      <nav className={cn("actions-nav", { disabled: !connected })}>
+      <nav className={cn("control-bar-left", { disabled: !connected })} style={{ display: "flex", gap: "1rem" }}>
+        {/* Connection Button */}
         <button
-          className={cn("action-button mic-button")}
-          onClick={() => setMuted(!muted)}
+          ref={connectButtonRef}
+          className={cn("brutalist-btn", { active: connected })}
+          onClick={connected ? disconnect : connect}
+          style={{ backgroundColor: connected ? "var(--color-white)" : "var(--color-black)", color: connected ? "var(--color-black)" : "var(--color-white)" }}
         >
-          {!muted ? (
-            <span className="material-symbols-outlined filled">mic</span>
-          ) : (
-            <span className="material-symbols-outlined filled">mic_off</span>
-          )}
+          {connected ? "DISCONNECT" : "CONNECT MENTOR"}
         </button>
 
-        <div className="action-button no-action outlined">
-          <AudioPulse volume={volume} active={connected} hover={false} />
-        </div>
+        {/* Mic Button */}
+        <button
+          className={cn("brutalist-btn")}
+          onClick={() => setMuted(!muted)}
+        >
+          {!muted ? "[MIC ON]" : "[MIC OFF]"}
+        </button>
 
         {supportsVideo && (
           <>
-            <MediaStreamButton
-              isStreaming={screenCapture.isStreaming}
-              start={changeStreams(screenCapture)}
-              stop={changeStreams()}
-              onIcon="cancel_presentation"
-              offIcon="present_to_all"
-            />
-            <MediaStreamButton
-              isStreaming={webcam.isStreaming}
-              start={changeStreams(webcam)}
-              stop={changeStreams()}
-              onIcon="videocam_off"
-              offIcon="videocam"
-            />
+             <button
+              className={cn("brutalist-btn")}
+              onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
+            >
+              {screenCapture.isStreaming ? "STOP SCREEN" : "SHARE SCREEN"}
+            </button>
+            <button
+              className={cn("brutalist-btn")}
+              onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
+            >
+              {webcam.isStreaming ? "CAM OFF" : "CAM ON"}
+            </button>
           </>
         )}
         {children}
       </nav>
 
-      <div className={cn("connection-container", { connected })}>
-        <div className="connection-button-container">
-          <button
-            ref={connectButtonRef}
-            className={cn("action-button connect-toggle", { connected })}
-            onClick={connected ? disconnect : connect}
-          >
-            <span className="material-symbols-outlined filled">
-              {connected ? "pause" : "play_arrow"}
-            </span>
-          </button>
+      <div className="control-bar-right" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="brutalist-body" style={{ fontWeight: "bold" }}>FLOW STATE:</span>
+          <div style={{ display: "flex", gap: "4px", height: "30px", alignItems: "flex-end" }}>
+            <div style={{ width: "12px", height: "10px", backgroundColor: "black" }}></div>
+            <div style={{ width: "12px", height: "15px", backgroundColor: "black" }}></div>
+            <div style={{ width: "12px", height: "20px", backgroundColor: "black" }}></div>
+            <div style={{ width: "12px", height: "25px", border: "3px solid black" }}></div>
+            <div style={{ width: "12px", height: "30px", border: "3px solid black" }}></div>
+          </div>
         </div>
-        <span className="text-indicator">Streaming</span>
       </div>
       {enableEditingSettings ? <SettingsDialog /> : ""}
     </section>

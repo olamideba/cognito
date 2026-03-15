@@ -2,7 +2,9 @@ import {
   ChangeEvent,
   FormEventHandler,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import "./settings-dialog.scss";
@@ -17,6 +19,7 @@ type FunctionDeclarationsTool = Tool & {
 
 export default function SettingsDialog() {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const { config, setConfig, connected } = useLiveAPIContext();
   const functionDeclarations: FunctionDeclaration[] = useMemo(() => {
     if (!Array.isArray(config.tools)) {
@@ -91,16 +94,53 @@ export default function SettingsDialog() {
     [config, setConfig]
   );
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (open) {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
+
   return (
     <div className="settings-dialog">
       <button
         className="action-button material-symbols-outlined"
-        onClick={() => setOpen(!open)}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-controls="settings-dialog"
       >
         settings
       </button>
-      <dialog className="dialog" style={{ display: open ? "block" : "none" }}>
+      <dialog
+        id="settings-dialog"
+        className="dialog"
+        ref={dialogRef}
+        onClose={() => setOpen(false)}
+        onCancel={(event) => {
+          setOpen(false);
+          event.preventDefault();
+        }}
+      >
         <div className={`dialog-container ${connected ? "disabled" : ""}`}>
+          <div className="dialog-header">
+            <div className="dialog-title">Settings</div>
+            <button
+              className="dialog-close material-symbols-outlined"
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close settings"
+            >
+              close
+            </button>
+          </div>
           {connected && (
             <div className="connected-indicator">
               <p>

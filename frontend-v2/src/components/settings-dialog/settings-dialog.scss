@@ -1,10 +1,12 @@
 .select-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  height: 70px;
+  gap: 6px;
+  min-width: 200px;
   & > label {
-    font-size: 10px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
   }
 }
 
@@ -16,7 +18,11 @@
   height: 70px;
 
   .connected-indicator {
-    font-style: italic;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border: var(--border-medium);
+    padding: 0.75rem 1rem;
+    background: var(--color-white);
   }
 
   /*.connected-indicator {
@@ -56,91 +62,160 @@
     margin-bottom: 10px;
   }
 
-  button {
-    background: none;
-    border: 0;
+  h3,
+  h4 {
+    text-transform: uppercase;
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  h4 {
+    font-size: 0.9rem;
+  }
+
+  .action-button {
+    background: var(--color-white);
+    border: var(--border-medium);
+    padding: 0.5rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-speed) var(--transition-timing),
+      color var(--transition-speed) var(--transition-timing);
+  }
+
+  .action-button:hover {
+    background: var(--color-black);
+    color: var(--color-white);
   }
 
   .dialog {
-    font-family: "Space mono";
-    background: var(--Neutral-5);
-    border-radius: 18px;
-    color: var(--Neutral-80);
-    border: 0;
+    font-family: var(--font-primary);
+    background: var(--color-white);
+    color: var(--color-black);
+    border: var(--border-thick);
+    border-radius: 0;
     padding: 0;
     margin: 0;
     position: fixed;
-    top: -400px;
-    right: 0;
-    width: 696px;
-    height: 593px;
-    transform: translate(-25%, -50%);
+    top: 50%;
+    left: 50%;
+    width: min(90vw, 720px);
+    height: min(82vh, 640px);
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    box-shadow: 12px 12px 0 var(--color-black);
+  }
+
+  .dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
   }
 
   .dialog-container {
     box-sizing: border-box;
-    padding: 32px;
+    padding: 24px;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 
   .small {
     font-size: 80%;
   }
 
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: var(--border-thick);
+    padding-bottom: 1rem;
+  }
+
+  .dialog-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+  }
+
+  .dialog-close {
+    margin-left: auto;
+    background: var(--color-white);
+    border: var(--border-medium);
+    padding: 0.35rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-speed) var(--transition-timing),
+      color var(--transition-speed) var(--transition-timing);
+  }
+
+  .dialog-close:hover {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
   .mode-selectors {
     display: flex;
     gap: 1rem;
     padding: 8px 0;
+    flex-wrap: wrap;
+  }
+
+  .react-select__control {
+    min-height: 38px;
   }
 
   textarea.system {
-    border-radius: 12px;
-    background-color: var(--Neutral-15);
-    color: var(--Neutral-80);
+    border-radius: 0;
+    background-color: var(--color-white);
+    color: var(--color-black);
     margin-top: 8px;
-    font-family:
-      Google Sans,
-      sans-serif;
-    line-height: 21px;
-    font-size: 16px;
-    field-sizing: content;
-    width: calc(100% - 16px);
+    font-family: var(--font-primary);
+    line-height: 1.4;
+    font-size: 0.95rem;
+    width: 100%;
     min-height: 150px;
     height: 150px;
-    padding: 8px;
-    border: 0;
+    padding: 0.75rem;
+    border: var(--border-medium);
     resize: vertical;
     box-sizing: border-box;
   }
 
   .function-declarations {
-    font-size: 66%;
+    font-size: 0.75rem;
     width: 100%;
     /* Enables vertical scrolling */
   }
 
   .fd-rows {
     display: grid;
-    grid-template-columns: 1fr 0.5fr 1.5fr;
-    row-gap: 6px;
+    grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.8fr) minmax(220px, 1.5fr);
+    row-gap: 8px;
+    column-gap: 0.75rem;
     /* Three columns, last one takes remaining space */
   }
 
   .fd-row-name {
-    font-family: "Space mono";
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--Blue-400);
-    font-weight: bold;
-    border-radius: 8px;
-    border: 1px solid var(--Neutral-20, #2a2f31);
-    padding: 10px;
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-black);
+    border-radius: 0;
+    border: var(--border-medium);
+    padding: 0.5rem;
+    text-transform: uppercase;
   }
 
   .fd-row-args {
-    padding: 12px;
+    padding: 0.5rem;
+    border: var(--border-medium);
   }
 
   .fd-row-args > *:not(:last-child)::after {
@@ -149,7 +224,7 @@
 
   .fd-row {
     display: contents;
-    color: var(--Neutral-70);
+    color: var(--color-black);
     /* Make data-row participate in the grid layout of data-rows, without being an additional grid row */
     align-items: center;
     /* Vertically center the content of the row */
@@ -160,15 +235,15 @@
 
   .fd-row-description {
     flex: 1;
-    background: transparent;
-    border: none;
+    background: var(--color-white);
+    border: var(--border-medium);
     color: inherit;
     font-size: inherit;
-    padding: 2px 4px;
+    padding: 0.5rem;
 
     &:hover,
     &:focus {
-      background: var(--Neutral-20);
+      background: var(--color-gray-100);
       outline: none;
     }
   }

@@ -38,12 +38,14 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
-  const [model, setModel] = useState<string>("models/gemini-2.5-flash-native-audio-preview-12-2025");
+  const [model, setModel] = useState<string>(
+    "models/gemini-2.5-flash-native-audio-preview-12-2025"
+  );
   const [config, setConfig] = useState<LiveConnectConfig>({});
   const [connected, setConnected] = useState(false);
   const [volume, setVolume] = useState(0);
 
-  // register audio for streaming server -> speakers
+  // Wire up the audio-out streamer once.
   useEffect(() => {
     if (!audioStreamerRef.current) {
       audioContext({ id: "audio-out" }).then((audioCtx: AudioContext) => {
@@ -53,27 +55,18 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
             setVolume(ev.data.volume);
           })
           .then(() => {
-            // Successfully added worklet
+            // worklet added
           });
       });
     }
   }, [audioStreamerRef]);
 
+  // Subscribe to client events.
   useEffect(() => {
-    const onOpen = () => {
-      setConnected(true);
-    };
-
-    const onClose = () => {
-      setConnected(false);
-    };
-
-    const onError = (error: ErrorEvent) => {
-      console.error("error", error);
-    };
-
+    const onOpen = () => setConnected(true);
+    const onClose = () => setConnected(false);
+    const onError = (error: ErrorEvent) => console.error("error", error);
     const stopAudioStreamer = () => audioStreamerRef.current?.stop();
-
     const onAudio = (data: ArrayBuffer) =>
       audioStreamerRef.current?.addPCM16(new Uint8Array(data));
 
@@ -96,17 +89,16 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   }, [client]);
 
   const connect = useCallback(async () => {
-    if (!config) {
-      throw new Error("config has not been set");
-    }
     client.disconnect();
+    // model/config params are accepted by the client for API compat but the
+    // proxy already owns the real config; pass them through anyway.
     await client.connect(model, config);
   }, [client, config, model]);
 
   const disconnect = useCallback(async () => {
     client.disconnect();
     setConnected(false);
-  }, [setConnected, client]);
+  }, [client]);
 
   return {
     client,
