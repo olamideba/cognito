@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "dotenv>=0.9.9",
     "fastapi[standard]==0.115.6",
+    "google-cloud-firestore>=2.25.0",
     "google-genai==1.66.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
