@@ -15,18 +15,15 @@
  */
 
 import {
-  GoogleGenAIOptions,
   LiveClientToolResponse,
   LiveServerMessage,
   Part,
 } from "@google/genai";
 
-/**
- * the options to initiate the client, ensure apiKey is required
- */
-export type LiveClientOptions = GoogleGenAIOptions & { apiKey: string };
+export type LiveClientOptions = {
+  url: string;
+};
 
-/** log types */
 export type StreamingLog = {
   date: Date;
   type: string;
