@@ -103,7 +103,8 @@ body {
 }
 
 .sidebar {
-  width: 30%;
+  width: 275.19px;
+  flex: 0 0 275.19px;
   border-right: var(--border-thick);
   display: flex;
   flex-direction: column;
@@ -148,7 +149,8 @@ body {
 }
 
 .workspace {
-  width: 70%;
+  width: auto;
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: var(--color-white);
@@ -237,6 +239,30 @@ body {
 .brutalist-btn:hover {
   background-color: var(--color-white);
   color: var(--color-black);
+}
+
+.control-tray-btn {
+  padding: 0.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-medium);
+}
+
+.control-tray-btn svg {
+  display: block;
+}
+
+.control-tray-btn.connected {
+  background-color: var(--color-white);
+  color: var(--color-black);
+}
+
+.control-tray-btn.connected:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
 }
 
 .brutalist-btn-secondary {

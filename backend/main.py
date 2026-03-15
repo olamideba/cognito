@@ -11,6 +11,11 @@ from dotenv import load_dotenv
 from google import genai
 from pathlib import Path
 
+from routers import session as session_router
+from routers import memory as memory_router
+from core.session import register, deregister
+from core.db import create_session, get_session, resume_session
+
 load_dotenv()
 
 class LiveToolConfig(BaseModel):
@@ -41,6 +46,9 @@ app.add_middleware(
 @app.get("/healthz")
 def healthcheck() -> Dict[str, str]:
     return {"status": "ok"}
+
+app.include_router(session_router.router)
+app.include_router(memory_router.router)
 
 
 @app.get("/")
@@ -138,12 +146,28 @@ def _build_setup_message() -> dict:
 
 
 @app.websocket("/ws")
-async def websocket_proxy(ws: WebSocket):
+async def websocket_proxy(ws: WebSocket, session_id: Optional[str] = None, browser_token: Optional[str] = None):
     """
     WebSocket proxy: React frontend <-> proxy server <-> Google Gemini Live API.
     """
     await ws.accept()
     print("[proxy] Client Connected")
+
+    active_session_id = None
+    if session_id:
+        existing = await get_session(session_id)
+        if existing:
+            if existing.get("status") == "completed":
+                active_session_id = await resume_session(session_id)
+            else:
+                active_session_id = session_id
+        else:
+            active_session_id = await create_session()
+    else:
+        active_session_id = await create_session()
+
+    register(ws, active_session_id)
+    await ws.send_json({"type": "session_created", "session_id": active_session_id})
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -154,7 +178,11 @@ async def websocket_proxy(ws: WebSocket):
     upstream_url = f"{GEMINI_WS_URL}?key={api_key}"
 
     try:
-        async with websockets.connect(upstream_url) as google_ws:
+        async with websockets.connect(
+            upstream_url,
+            ping_interval=None,
+            ping_timeout=None,
+        ) as google_ws:
             print("[proxy] Google Connected")
 
             setup_msg = _build_setup_message()
@@ -232,4 +260,5 @@ async def websocket_proxy(ws: WebSocket):
         except Exception:
             pass
     finally:
+        deregister(ws)
         print("[proxy] Session ended")
