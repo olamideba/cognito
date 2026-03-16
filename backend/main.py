@@ -15,6 +15,8 @@ from routers import session as session_router
 from routers import memory as memory_router
 from core.session import register, deregister
 from core.db import create_session, get_session, resume_session, get_memory
+from interceptor import intercept
+from tools.registry import TOOL_DECLARATIONS
 
 load_dotenv()
 
@@ -69,27 +71,7 @@ def get_live_config() -> LiveConfigResponse:
         LiveToolConfig(type="googleSearch", googleSearch={}),
         LiveToolConfig(
             type="functionDeclarations",
-            functionDeclarations=[
-                {
-                    "name": "render_altair",
-                    "description": (
-                        "Displays an Altair graph in JSON format in the Cognito console."
-                    ),
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "json_graph": {
-                                "type": "string",
-                                "description": (
-                                    "JSON STRING representation of the graph to render. "
-                                    "Must be a string, not a JSON object."
-                                ),
-                            }
-                        },
-                        "required": ["json_graph"],
-                    },
-                }
-            ],
+            functionDeclarations=TOOL_DECLARATIONS,
         ),
     ]
 
@@ -241,24 +223,9 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
                 try:
                     async for raw_msg in google_ws:
                         text = raw_msg if isinstance(raw_msg, str) else raw_msg.decode()
-                        data = json.loads(text)
-
-                        # Log the type of message being relayed back
-                        if "serverContent" in data:
-                            sc = data["serverContent"]
-                            if sc.get("interrupted"):
-                                print("[proxy] Relaying interrupted ← Google")
-                            elif sc.get("turnComplete"):
-                                print("[proxy] Relaying turnComplete ← Google")
-                            else:
-                                print("[proxy] Relaying audio/content ← Google")
-                        elif "toolCall" in data:
-                            print("[proxy] Relaying toolCall ← Google")
-                        else:
-                            msg_type = next(iter(data.keys()), "unknown")
-                            print(f"[proxy] Relaying {msg_type} ← Google")
-
-                        await ws.send_text(text)
+                        was_tool_call = await intercept(text, google_ws, ws, active_session_id)
+                        if not was_tool_call:
+                            await ws.send_text(text)
                 except websockets.exceptions.ConnectionClosed:
                     print("[proxy] Google connection closed")
                 except Exception as e:
