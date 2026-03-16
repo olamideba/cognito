@@ -134,8 +134,8 @@ const RECV_COLOR = "var(--color-gray-800)";
 const LogEntry = memo(({ log }: { log: StreamingLog }) => {
   const Comp = resolveComponent(log);
   const isSend = log.type.includes("send");
-  const isConversation = (typeof log.message === "object" && log.message !== null) &&
-    (("turns" in log.message) || ("serverContent" in log.message));
+  // const _isConversation = (typeof log.message === "object" && log.message !== null) &&
+  //   (("turns" in log.message) || ("serverContent" in log.message));
 
   return (
     <div style={{

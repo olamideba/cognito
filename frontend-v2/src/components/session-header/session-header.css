@@ -1,0 +1,60 @@
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 1rem;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-primary);
+  border-bottom: 3px solid var(--color-black);
+  flex-shrink: 0;
+}
+
+.session-header__goal {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.session-header__goal.expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: 70%;
+}
+
+.session-header__timer {
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.session-header__timer.warning {
+  color: #ff3333;
+  animation: pulse-warning 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.session-header--complete {
+  background-color: var(--color-black);
+  justify-content: center;
+}
+
+.session-header--complete .session-header__label {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
