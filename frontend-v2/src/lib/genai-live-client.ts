@@ -12,11 +12,13 @@ import { EventEmitter } from "eventemitter3";
 import { difference } from "lodash";
 import { LiveClientOptions, StreamingLog } from "../types";
 import { base64ToArrayBuffer } from "./utils";
+import { CognitoEnvelope, isCognitoEnvelope } from "./ws-envelope";
 
 export interface LiveClientEventTypes {
   audio: (data: ArrayBuffer) => void;
   close: (event: CloseEvent) => void;
   content: (data: LiveServerContent) => void;
+  envelope: (envelope: CognitoEnvelope) => void;
   error: (error: ErrorEvent) => void;
   interrupted: () => void;
   log: (log: StreamingLog) => void;
@@ -78,12 +80,23 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
           return;
         }
 
-        if ((data as any)?.type === "session_created") {
-          const sessionId = (data as any)?.session_id;
-          if (typeof sessionId === "string" && sessionId.length > 0) {
-            this.log("server.send", { type: "session_created", sessionId });
-            this.emit("sessioncreated", sessionId);
+        if (isCognitoEnvelope(data)) {
+          this.log("server.envelope", `envelope:${(data as CognitoEnvelope).type}`);
+          this.emit("envelope", data as CognitoEnvelope);
+          if ((data as CognitoEnvelope).type === "session_created") {
+            const sessionId = (data as any).payload?.session_id ?? (data as any).session_id;
+            if (typeof sessionId === "string" && sessionId.length > 0) {
+              this.emit("sessioncreated", sessionId);
+            }
           }
+          return;
+        }
+
+        // Legacy session_created without envelope wrapper (backward compat)
+        if ((data as any)?.type === "session_created" && (data as any)?.session_id) {
+          const sessionId = (data as any).session_id;
+          this.log("server.send", `session_created:${sessionId}`);
+          this.emit("sessioncreated", sessionId);
           return;
         }
 
