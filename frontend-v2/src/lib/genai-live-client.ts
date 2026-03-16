@@ -21,6 +21,7 @@ export interface LiveClientEventTypes {
   interrupted: () => void;
   log: (log: StreamingLog) => void;
   open: () => void;
+  sessioncreated: (sessionId: string) => void;
   setupcomplete: () => void;
   toolcall: (toolCall: LiveServerToolCall) => void;
   toolcallcancellation: (
@@ -74,6 +75,15 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
           data = JSON.parse(event.data as string) as LiveServerMessage;
         } catch {
           console.warn("[proxy-client] unparseable message", event.data);
+          return;
+        }
+
+        if ((data as any)?.type === "session_created") {
+          const sessionId = (data as any)?.session_id;
+          if (typeof sessionId === "string" && sessionId.length > 0) {
+            this.log("server.send", { type: "session_created", sessionId });
+            this.emit("sessioncreated", sessionId);
+          }
           return;
         }
 

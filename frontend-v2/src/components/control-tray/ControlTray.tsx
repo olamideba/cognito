@@ -1,6 +1,16 @@
 import cn from "classnames";
 
 import { memo, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import {
+  Camera,
+  CameraOff,
+  Mic,
+  MicOff,
+  MonitorStop,
+  MonitorUp,
+  Pause,
+  Play,
+} from "lucide-react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
 import { useScreenCapture } from "../../hooks/use-screen-capture";
@@ -124,34 +134,57 @@ function ControlTray({
         {/* Connection Button */}
         <button
           ref={connectButtonRef}
-          className={cn("brutalist-btn", { active: connected })}
+          className={cn("brutalist-btn", "control-tray-btn", {
+            connected,
+          })}
           onClick={connected ? disconnect : connect}
-          style={{ backgroundColor: connected ? "var(--color-white)" : "var(--color-black)", color: connected ? "var(--color-black)" : "var(--color-white)" }}
+          title={connected ? "Disconnect mentor" : "Connect mentor"}
+          aria-label={connected ? "Disconnect mentor" : "Connect mentor"}
         >
-          {connected ? "DISCONNECT" : "CONNECT MENTOR"}
+          {connected ? <Pause size={22} /> : <Play size={22} />}
         </button>
 
         {/* Mic Button */}
         <button
-          className={cn("brutalist-btn")}
+          className={cn("brutalist-btn", "control-tray-btn")}
           onClick={() => setMuted(!muted)}
+          title={!muted ? "Mic on" : "Mic off"}
+          aria-label={!muted ? "Mic on" : "Mic off"}
         >
-          {!muted ? "[MIC ON]" : "[MIC OFF]"}
+          {!muted ? <Mic size={22} /> : <MicOff size={22} />}
         </button>
 
         {supportsVideo && (
           <>
-             <button
-              className={cn("brutalist-btn")}
-              onClick={screenCapture.isStreaming ? changeStreams() : changeStreams(screenCapture)}
+            <button
+              className={cn("brutalist-btn", "control-tray-btn")}
+              onClick={
+                screenCapture.isStreaming
+                  ? changeStreams()
+                  : changeStreams(screenCapture)
+              }
+              title={
+                screenCapture.isStreaming ? "Stop screen share" : "Share screen"
+              }
+              aria-label={
+                screenCapture.isStreaming ? "Stop screen share" : "Share screen"
+              }
             >
-              {screenCapture.isStreaming ? "STOP SCREEN" : "SHARE SCREEN"}
+              {screenCapture.isStreaming ? (
+                <MonitorStop size={22} />
+              ) : (
+                <MonitorUp size={22} />
+              )}
             </button>
             <button
-              className={cn("brutalist-btn")}
-              onClick={webcam.isStreaming ? changeStreams() : changeStreams(webcam)}
+              className={cn("brutalist-btn", "control-tray-btn")}
+              onClick={
+                webcam.isStreaming ? changeStreams() : changeStreams(webcam)
+              }
+              title={webcam.isStreaming ? "Camera off" : "Camera on"}
+              aria-label={webcam.isStreaming ? "Camera off" : "Camera on"}
             >
-              {webcam.isStreaming ? "CAM OFF" : "CAM ON"}
+              {webcam.isStreaming ? <CameraOff size={22} /> : <Camera size={22} />}
             </button>
           </>
         )}
