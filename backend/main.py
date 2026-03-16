@@ -1,6 +1,9 @@
 import asyncio
+import inspect
 import json
 import os
+import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import websockets
@@ -16,14 +19,50 @@ from routers import session as session_router
 from routers import memory as memory_router
 from core.session import register, deregister
 from core.db import create_session, get_session, resume_session, get_memory
-from interceptor import intercept
 from tools.registry import TOOL_DECLARATIONS
+from tools.handlers import set_live_context
 
 from agent import agent
+from google.adk import telemetry as adk_telemetry
+from google.adk.flows.llm_flows import functions as adk_functions
 from google.adk.runners import Runner
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.sessions import InMemorySessionService
 from google.adk.agents.live_request_queue import LiveRequestQueue
+
+def _patch_adk_trace_tool_call() -> None:
+    signature = inspect.signature(adk_telemetry.trace_tool_call)
+    if "response_event_id" in signature.parameters:
+        return
+
+    original = adk_telemetry.trace_tool_call
+
+    def trace_tool_call_compat(
+        *,
+        tool=None,
+        args=None,
+        function_response_event=None,
+        **kwargs,
+    ):
+        if function_response_event is not None:
+            return original(
+                tool=tool,
+                args=args or {},
+                function_response_event=function_response_event,
+            )
+        # Newer ADK call signature; telemetry only, safe to skip.
+        return None
+
+    adk_telemetry.trace_tool_call = trace_tool_call_compat
+    adk_functions.trace_tool_call = trace_tool_call_compat
+
+
+_patch_adk_trace_tool_call()
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 session_service = InMemorySessionService()
 runner = Runner(app_name="cognito", agent=agent, session_service=session_service)
@@ -152,6 +191,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
 
     active_session_id = None
     memory: Optional[Dict[str, Any]] = None
+    is_reconnect = False
     if session_id:
         existing = await get_session(session_id)
         if existing:
@@ -159,6 +199,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
                 active_session_id = await resume_session(session_id)
             else:
                 active_session_id = session_id
+            is_reconnect = True
         else:
             active_session_id = await create_session()
     else:
@@ -180,7 +221,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
     try:
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
-            response_modalities=["AUDIO"],
+            response_modalities=[types.Modality.AUDIO],
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
                     prebuilt_voice_config=types.PrebuiltVoiceConfig(
@@ -190,13 +231,52 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
             )
         )
 
-        await session_service.create_session(
+        existing_adk_session = await session_service.get_session(
             app_name="cognito",
             user_id=active_session_id,
-            session_id=active_session_id
+            session_id=active_session_id,
         )
+        if not existing_adk_session:
+            await session_service.create_session(
+                app_name="cognito",
+                user_id=active_session_id,
+                session_id=active_session_id,
+            )
 
         live_request_queue = LiveRequestQueue()
+
+        session_snapshot = await get_session(active_session_id)
+        if is_reconnect and session_snapshot:
+            goal = session_snapshot.get("goal")
+            time_limit_seconds = session_snapshot.get("time_limit_seconds")
+            start_time = session_snapshot.get("start_time")
+            remaining_minutes = None
+            if time_limit_seconds and start_time:
+                try:
+                    start_dt = datetime.fromisoformat(start_time)
+                    if start_dt.tzinfo is None:
+                        start_dt = start_dt.replace(tzinfo=timezone.utc)
+                    elapsed = (datetime.now(timezone.utc) - start_dt).total_seconds()
+                    remaining_seconds = max(0, time_limit_seconds - elapsed)
+                    remaining_minutes = max(0, int(remaining_seconds // 60))
+                except Exception:
+                    remaining_minutes = None
+            if goal or time_limit_seconds or remaining_minutes is not None:
+                parts = []
+                if goal:
+                    parts.append(f"Goal: {goal}.")
+                if remaining_minutes is not None:
+                    parts.append(f"Remaining time: {remaining_minutes} minutes.")
+                elif time_limit_seconds:
+                    minutes = int(time_limit_seconds) // 60
+                    parts.append(f"Time limit: {minutes} minutes.")
+                parts.append("Continue without re-asking for any already-known fields.")
+                live_request_queue.send_content(
+                    types.Content(
+                        role="user",
+                        parts=[types.Part(text=" ".join(parts))],
+                    )
+                )
 
         async def upstream_task():
             """Client WebSocket → LiveRequestQueue"""
@@ -236,6 +316,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
         async def downstream_task():
             """runner.run_live() events → Client WebSocket"""
             try:
+                set_live_context(active_session_id, ws)
                 await ws.send_json({"setupComplete": {}})
                 
                 async for event in runner.run_live(
@@ -245,26 +326,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
                 ):
                     event_json_str = serialize_event(event)
                     if event_json_str:
-                        async def send_to_upstream(response_str: str):
-                            response_data = json.loads(response_str)
-                            if "toolResponse" in response_data:
-                                function_responses = response_data["toolResponse"].get("functionResponses", [])
-                                adk_parts = []
-                                for resp in function_responses:
-                                    adk_parts.append(types.Part(
-                                        function_response=types.FunctionResponse(
-                                            name=resp.get("name"),
-                                            id=resp.get("id"),
-                                            response=resp.get("response")
-                                        )
-                                    ))
-                                if adk_parts:
-                                    live_request_queue.send_content(types.Content(parts=adk_parts))
-
-                        was_intercepted = await intercept(event_json_str, send_to_upstream, ws, active_session_id)
-                        if not was_intercepted:
-                            # Send unmodified to frontend
-                            await ws.send_text(event_json_str)
+                        await ws.send_text(event_json_str)
 
             except Exception as e:
                 print(f"[proxy] downstream_task error: {e}")
@@ -279,5 +341,14 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
             pass
     finally:
         deregister(ws)
+        if active_session_id:
+            try:
+                await session_service.delete_session(
+                    app_name="cognito",
+                    user_id=active_session_id,
+                    session_id=active_session_id,
+                )
+            except Exception:
+                pass
         print("[proxy] Session ended")
         
