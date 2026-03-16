@@ -12,7 +12,41 @@ const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 const WS_URL = BACKEND_BASE.replace(/^http/, "ws") + "/ws";
 
-const apiOptions: LiveClientOptions = { url: WS_URL };
+const BROWSER_TOKEN_KEY = "cognito_browser_token";
+const SESSION_ID_KEY = "cognito_session_id";
+
+function getOrCreateBrowserToken(): string {
+  try {
+    const existing = localStorage.getItem(BROWSER_TOKEN_KEY);
+    if (existing) return existing;
+    const created =
+      (globalThis.crypto as Crypto | undefined)?.randomUUID?.() ??
+      `bt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(BROWSER_TOKEN_KEY, created);
+    return created;
+  } catch {
+    return `bt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+function getStoredSessionId(): string | null {
+  try {
+    return localStorage.getItem(SESSION_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function buildWsUrl(): string {
+  const url = new URL(WS_URL);
+  const browserToken = getOrCreateBrowserToken();
+  url.searchParams.set("browser_token", browserToken);
+  const sessionId = getStoredSessionId();
+  if (sessionId) {
+    url.searchParams.set("session_id", sessionId);
+  }
+  return url.toString();
+}
 
 type BackendState = "loading" | "ready" | "error";
 
@@ -57,7 +91,7 @@ function App() {
 
   return (
     <div className="App">
-      <LiveAPIProvider options={apiOptions}>
+      <LiveAPIProvider options={{ url: buildWsUrl() }}>
         <div className="app-layout">
           <main className="app-main">
             <SidePanel />

@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 from google import genai
 from pathlib import Path
 
+from routers import session as session_router
+from routers import memory as memory_router
+from core.session import register, deregister
+from core.db import create_session, get_session, resume_session, get_memory
+from interceptor import intercept
+from tools.registry import TOOL_DECLARATIONS
+
 load_dotenv()
 
 class LiveToolConfig(BaseModel):
@@ -42,6 +49,9 @@ app.add_middleware(
 def healthcheck() -> Dict[str, str]:
     return {"status": "ok"}
 
+app.include_router(session_router.router)
+app.include_router(memory_router.router)
+
 
 @app.get("/")
 def root() -> Dict[str, str]:
@@ -61,27 +71,7 @@ def get_live_config() -> LiveConfigResponse:
         LiveToolConfig(type="googleSearch", googleSearch={}),
         LiveToolConfig(
             type="functionDeclarations",
-            functionDeclarations=[
-                {
-                    "name": "render_altair",
-                    "description": (
-                        "Displays an Altair graph in JSON format in the Cognito console."
-                    ),
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "json_graph": {
-                                "type": "string",
-                                "description": (
-                                    "JSON STRING representation of the graph to render. "
-                                    "Must be a string, not a JSON object."
-                                ),
-                            }
-                        },
-                        "required": ["json_graph"],
-                    },
-                }
-            ],
+            functionDeclarations=TOOL_DECLARATIONS,
         ),
     ]
 
@@ -101,7 +91,7 @@ GEMINI_WS_URL = (
 )
 
 
-def _build_setup_message() -> dict:
+def _build_setup_message(memory: Optional[Dict[str, Any]] = None) -> dict:
     """Build the initial setup JSON frame from the live config."""
     cfg = get_live_config()
 
@@ -118,6 +108,18 @@ def _build_setup_message() -> dict:
                 raise ValueError(f"Unsupported tool type: {tool.type}")
         return serialized
 
+    system_parts = [{"text": cfg.systemInstruction}]
+    if memory:
+        memory_payload = json.dumps(memory, ensure_ascii=False)
+        system_parts.append(
+            {
+                "text": (
+                    "User memory (read-only context, may be stale):\n"
+                    f"{memory_payload}"
+                )
+            }
+        )
+
     return {
         "setup": {
             "model": cfg.model,
@@ -129,21 +131,41 @@ def _build_setup_message() -> dict:
                     }
                 },
             },
-            "systemInstruction": {
-                "parts": [{"text": cfg.systemInstruction}]
-            },
+            "systemInstruction": {"parts": system_parts},
             "tools": serialize_tools(cfg.tools),
         }
     }
 
 
 @app.websocket("/ws")
-async def websocket_proxy(ws: WebSocket):
+async def websocket_proxy(ws: WebSocket, 
+session_id: Optional[str] = None, browser_token: Optional[str] = None
+):
     """
     WebSocket proxy: React frontend <-> proxy server <-> Google Gemini Live API.
     """
     await ws.accept()
     print("[proxy] Client Connected")
+
+    active_session_id = None
+    memory: Optional[Dict[str, Any]] = None
+    if session_id:
+        existing = await get_session(session_id)
+        if existing:
+            if existing.get("status") == "completed":
+                active_session_id = await resume_session(session_id)
+            else:
+                active_session_id = session_id
+        else:
+            active_session_id = await create_session()
+    else:
+        active_session_id = await create_session()
+
+    register(ws, active_session_id)
+    await ws.send_json({"type": "session_created", "session_id": active_session_id})
+
+    if browser_token:
+        memory = await get_memory(browser_token)
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -154,10 +176,14 @@ async def websocket_proxy(ws: WebSocket):
     upstream_url = f"{GEMINI_WS_URL}?key={api_key}"
 
     try:
-        async with websockets.connect(upstream_url) as google_ws:
+        async with websockets.connect(
+            upstream_url,
+            ping_interval=None,
+            ping_timeout=None,
+        ) as google_ws:
             print("[proxy] Google Connected")
 
-            setup_msg = _build_setup_message()
+            setup_msg = _build_setup_message(memory)
             await google_ws.send(json.dumps(setup_msg))
             print("[proxy] Setup Sent")
 
@@ -197,24 +223,9 @@ async def websocket_proxy(ws: WebSocket):
                 try:
                     async for raw_msg in google_ws:
                         text = raw_msg if isinstance(raw_msg, str) else raw_msg.decode()
-                        data = json.loads(text)
-
-                        # Log the type of message being relayed back
-                        if "serverContent" in data:
-                            sc = data["serverContent"]
-                            if sc.get("interrupted"):
-                                print("[proxy] Relaying interrupted ← Google")
-                            elif sc.get("turnComplete"):
-                                print("[proxy] Relaying turnComplete ← Google")
-                            else:
-                                print("[proxy] Relaying audio/content ← Google")
-                        elif "toolCall" in data:
-                            print("[proxy] Relaying toolCall ← Google")
-                        else:
-                            msg_type = next(iter(data.keys()), "unknown")
-                            print(f"[proxy] Relaying {msg_type} ← Google")
-
-                        await ws.send_text(text)
+                        was_tool_call = await intercept(text, google_ws, ws, active_session_id)
+                        if not was_tool_call:
+                            await ws.send_text(text)
                 except websockets.exceptions.ConnectionClosed:
                     print("[proxy] Google connection closed")
                 except Exception as e:
@@ -232,4 +243,5 @@ async def websocket_proxy(ws: WebSocket):
         except Exception:
             pass
     finally:
+        deregister(ws)
         print("[proxy] Session ended")
