@@ -3,7 +3,11 @@ from datetime import datetime
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
-from routers.generate import AnalogyRequest, generate_analogy
+from routers.generate import (
+    AnalogyRequest,
+    ImageGenerationResult,
+    generate_analogy,
+)
 from routers.session import QuizAnswerRequest, post_quiz_answer
 from tools import handlers
 
@@ -22,11 +26,19 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
         handlers.set_live_context("session-123", self.ws)
 
     async def test_generate_analogy_visual_emits_timestamp_and_persists(self) -> None:
-        mock_image = AsyncMock(return_value="data:image/png;base64,abc")
+        mock_image = AsyncMock(
+            return_value=ImageGenerationResult(
+                image_url="data:image/png;base64,abc",
+                status="generated",
+                message="Analogy image generated successfully.",
+                model="gemini-2.5-flash-image",
+                used_fallback=False,
+            )
+        )
         mock_append = AsyncMock()
 
         with (
-            patch("routers.generate.generate_image", mock_image),
+            patch("routers.generate.generate_image_result", mock_image),
             patch("tools.handlers.append_analogy", mock_append),
         ):
             result = await handlers.generate_analogy_visual(
@@ -38,6 +50,8 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["session_id"], "session-123")
         self.assertEqual(result["concept_label"], "Recursion Stack")
         self.assertEqual(result["image_url"], "data:image/png;base64,abc")
+        self.assertEqual(result["message"], "Analogy image generated successfully.")
+        self.assertFalse(result["used_fallback"])
         datetime.fromisoformat(result["timestamp"])
 
         mock_append.assert_awaited_once_with(
@@ -51,6 +65,33 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
             self.ws.messages,
             [{"type": "analogy_generated", "payload": result}],
         )
+
+    async def test_generate_analogy_visual_marks_fallback_as_failed(self) -> None:
+        mock_image = AsyncMock(
+            return_value=ImageGenerationResult(
+                image_url="data:image/svg+xml;base64,fallback",
+                status="failed",
+                message="Image generation failed; fallback visual provided.",
+                model="gemini-2.5-flash-image",
+                used_fallback=True,
+                error="model not available",
+            )
+        )
+        mock_append = AsyncMock()
+
+        with (
+            patch("routers.generate.generate_image_result", mock_image),
+            patch("tools.handlers.append_analogy", mock_append),
+        ):
+            result = await handlers.generate_analogy_visual(
+                concept_label="Queue",
+                image_prompt="Show items entering and leaving a line.",
+            )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["used_fallback"])
+        self.assertEqual(result["error"], "model not available")
+        mock_append.assert_awaited_once()
 
     async def test_render_quiz_component_hides_correct_answer_in_ui_payload(self) -> None:
         mock_get_session = AsyncMock(return_value={"state": {}})

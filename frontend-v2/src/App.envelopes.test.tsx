@@ -7,6 +7,7 @@ const { fetchLiveConfigMock, mockClient } = vi.hoisted(() => {
   const handlers = new Map<string, Set<(payload: unknown) => void>>();
 
   const client = {
+    send: vi.fn(),
     on(event: string, handler: (payload: unknown) => void) {
       if (!handlers.has(event)) handlers.set(event, new Set());
       handlers.get(event)!.add(handler);
@@ -59,6 +60,7 @@ vi.mock("./components/control-tray/ControlTray", () => ({
 describe("App envelope handling", () => {
   beforeEach(() => {
     mockClient.reset();
+    mockClient.send.mockReset();
     fetchLiveConfigMock.mockReset();
     fetchLiveConfigMock.mockResolvedValue({});
   });
@@ -134,5 +136,48 @@ describe("App envelope handling", () => {
       component_id: "quiz-1",
       answer: "Stack",
     });
+  });
+
+  it("sends quiz submission context back to the live client for spoken feedback", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ is_correct: false, feedback: "Incorrect" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/GOAL:/)).toBeInTheDocument();
+    });
+
+    act(() => {
+      mockClient.emit("envelope", {
+        type: "session_created",
+        payload: { session_id: "sess-42" },
+      });
+      mockClient.emit("envelope", {
+        type: "quiz_component",
+        payload: {
+          component_id: "quiz-1",
+          component_type: "multiple_choice",
+          question: "Which structure is FIFO?",
+          options: ["Stack", "Queue"],
+        },
+      });
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Stack/i }));
+
+    await waitFor(() => {
+      expect(mockClient.send).toHaveBeenCalledTimes(1);
+    });
+
+    const [parts, turnComplete] = mockClient.send.mock.calls[0];
+    expect(turnComplete).toBe(true);
+    expect(parts).toEqual([
+      expect.objectContaining({
+        text: expect.stringContaining('Selected answer: "Stack".'),
+      }),
+    ]);
   });
 });
