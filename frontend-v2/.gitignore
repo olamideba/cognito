@@ -25,3 +25,5 @@ dist-ssr
 
 SMOKE_TESTS.md
 .env
+
+.vite/

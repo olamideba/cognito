@@ -1,12 +1,11 @@
 import json
-from typing import Any, Dict
-import websockets
+from typing import Any, Dict, Callable
 from fastapi import WebSocket
 from tools.handlers import handle_tool_call
 
 async def intercept(
     raw_msg: str,
-    google_ws: websockets.WebSocketClientProtocol,
+    send_to_upstream: Callable,
     client_ws: WebSocket,
     session_id: str
 ) -> bool:
@@ -42,5 +41,5 @@ async def intercept(
             "functionResponses": responses
         }
     }
-    await google_ws.send(json.dumps(tool_response_msg))
+    await send_to_upstream(json.dumps(tool_response_msg))
     return True
