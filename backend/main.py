@@ -17,10 +17,12 @@ from pathlib import Path
 
 from routers import session as session_router
 from routers import memory as memory_router
+from routers import generate as generate_router
 from core.session import register, deregister
 from core.db import create_session, get_session, resume_session, get_memory
 from tools.registry import TOOL_DECLARATIONS
 from tools.handlers import set_live_context
+from flow import handle_flow_signal
 
 from agent import agent
 from google.adk import telemetry as adk_telemetry
@@ -100,6 +102,7 @@ def healthcheck() -> Dict[str, str]:
 
 app.include_router(session_router.router)
 app.include_router(memory_router.router)
+app.include_router(generate_router.router)
 
 
 @app.get("/")
@@ -206,7 +209,12 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
         active_session_id = await create_session()
 
     register(ws, active_session_id)
-    await ws.send_json({"type": "session_created", "session_id": active_session_id})
+    await ws.send_json(
+        {
+            "type": "session_created",
+            "payload": {"session_id": active_session_id},
+        }
+    )
 
     if browser_token:
         memory = await get_memory(browser_token)
@@ -246,37 +254,7 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
         live_request_queue = LiveRequestQueue()
 
         session_snapshot = await get_session(active_session_id)
-        if is_reconnect and session_snapshot:
-            goal = session_snapshot.get("goal")
-            time_limit_seconds = session_snapshot.get("time_limit_seconds")
-            start_time = session_snapshot.get("start_time")
-            remaining_minutes = None
-            if time_limit_seconds and start_time:
-                try:
-                    start_dt = datetime.fromisoformat(start_time)
-                    if start_dt.tzinfo is None:
-                        start_dt = start_dt.replace(tzinfo=timezone.utc)
-                    elapsed = (datetime.now(timezone.utc) - start_dt).total_seconds()
-                    remaining_seconds = max(0, time_limit_seconds - elapsed)
-                    remaining_minutes = max(0, int(remaining_seconds // 60))
-                except Exception:
-                    remaining_minutes = None
-            if goal or time_limit_seconds or remaining_minutes is not None:
-                parts = []
-                if goal:
-                    parts.append(f"Goal: {goal}.")
-                if remaining_minutes is not None:
-                    parts.append(f"Remaining time: {remaining_minutes} minutes.")
-                elif time_limit_seconds:
-                    minutes = int(time_limit_seconds) // 60
-                    parts.append(f"Time limit: {minutes} minutes.")
-                parts.append("Continue without re-asking for any already-known fields.")
-                live_request_queue.send_content(
-                    types.Content(
-                        role="user",
-                        parts=[types.Part(text=" ".join(parts))],
-                    )
-                )
+
 
         async def upstream_task():
             """Client WebSocket → LiveRequestQueue"""
@@ -286,7 +264,9 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
                     data = json.loads(raw_msg)
                     
                     if data.get("type") == "flow_signal":
-                        # Handled client side later
+                        asyncio.create_task(
+                            handle_flow_signal(data, active_session_id, ws)
+                        )
                         continue
 
                     if "realtimeInput" in data:
@@ -318,6 +298,39 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
             try:
                 set_live_context(active_session_id, ws)
                 await ws.send_json({"setupComplete": {}})
+                
+                if is_reconnect and session_snapshot:
+                    goal = session_snapshot.get("goal")
+                    time_limit_seconds = session_snapshot.get("time_limit_seconds")
+                    start_time = session_snapshot.get("start_time")
+                    remaining_minutes = None
+                    if time_limit_seconds and start_time:
+                        try:
+                            start_dt = datetime.fromisoformat(start_time)
+                            if start_dt.tzinfo is None:
+                                start_dt = start_dt.replace(tzinfo=timezone.utc)
+                            elapsed = (datetime.now(timezone.utc) - start_dt).total_seconds()
+                            remaining_seconds = max(0, time_limit_seconds - elapsed)
+                            remaining_minutes = max(0, int(remaining_seconds // 60))
+                        except Exception:
+                            remaining_minutes = None
+                    if goal or time_limit_seconds or remaining_minutes is not None:
+                        parts = []
+                        if goal:
+                            parts.append(f"Goal: {goal}.")
+                        if remaining_minutes is not None:
+                            parts.append(f"Remaining time: {remaining_minutes} minutes.")
+                        elif time_limit_seconds:
+                            minutes = int(time_limit_seconds) // 60
+                            parts.append(f"Time limit: {minutes} minutes.")
+                        parts.append("Continue without re-asking for any already-known fields.")
+                        live_request_queue.send_content(
+                            types.Content(
+                                role="user",
+                                parts=[types.Part(text=" ".join(parts))],
+                            )
+                        )
+                
                 
                 async for event in runner.run_live(
                     user_id=active_session_id,session_id=active_session_id,

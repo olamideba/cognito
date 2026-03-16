@@ -54,11 +54,16 @@ async def append_distraction_event(session_id: str, event: Dict[str, Any]) -> No
         "distraction_events": firestore.ArrayUnion([event])
     })
 
-async def append_analogy(session_id: str, concept: str, image_url: str) -> None:
+async def append_analogy(
+    session_id: str,
+    concept: str,
+    image_url: str,
+    timestamp: Optional[str] = None,
+) -> None:
     entry = {
         "concept": concept, 
         "image_url": image_url, 
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
     }
     await get_db().collection(SESSIONS_COLLECTION).document(session_id).update({
         "analogy_history": firestore.ArrayUnion([entry])

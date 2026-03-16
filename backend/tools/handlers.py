@@ -68,6 +68,7 @@ async def confirm_session_goal(
     )
 
     result = {
+        "session_id": session_id,
         "status": "active",
         "goal": goal,
         "time_limit_seconds": time_limit_seconds,
@@ -122,15 +123,19 @@ async def generate_analogy_visual(
     if not session_id:
         return {"error": "Session context not available"}
 
-    image_url = f"https://placeholder.com/analogy/{uuid.uuid4()}"
+    from routers.generate import generate_image
 
-    await append_analogy(session_id, concept_label, image_url)
+    image_url = await generate_image(concept_label, image_prompt)
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    await append_analogy(session_id, concept_label, image_url, timestamp)
 
     result = {
+        "session_id": session_id,
         "status": "generated",
         "concept_label": concept_label,
-        "image_prompt": image_prompt,
         "image_url": image_url,
+        "timestamp": timestamp,
     }
 
     await _send_ui_envelope({"type": "analogy_generated", "payload": result})
