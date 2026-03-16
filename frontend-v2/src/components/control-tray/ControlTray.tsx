@@ -24,6 +24,7 @@ export type ControlTrayProps = {
   supportsVideo: boolean;
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
+  flowScore?: number;
 };
 
 function ControlTray({
@@ -32,6 +33,7 @@ function ControlTray({
   onVideoStreamChange = () => {},
   supportsVideo,
   enableEditingSettings,
+  flowScore = 100,
 }: ControlTrayProps) {
   const videoStreams = [useWebcam(), useScreenCapture()];
   const [activeVideoStream, setActiveVideoStream] =
@@ -195,11 +197,19 @@ function ControlTray({
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span className="brutalist-body" style={{ fontWeight: "bold" }}>FLOW STATE:</span>
           <div style={{ display: "flex", gap: "4px", height: "30px", alignItems: "flex-end" }}>
-            <div style={{ width: "12px", height: "10px", backgroundColor: "black" }}></div>
-            <div style={{ width: "12px", height: "15px", backgroundColor: "black" }}></div>
-            <div style={{ width: "12px", height: "20px", backgroundColor: "black" }}></div>
-            <div style={{ width: "12px", height: "25px", border: "3px solid black" }}></div>
-            <div style={{ width: "12px", height: "30px", border: "3px solid black" }}></div>
+            {[10, 15, 20, 25, 30].map((h, i) => (
+              <div
+                key={i}
+                style={{
+                  width: "12px",
+                  height: `${h}px`,
+                  backgroundColor: flowScore > i * 20 ? "black" : "transparent",
+                  border: "3px solid black",
+                  boxSizing: "border-box",
+                  transition: "background-color 150ms"
+                }}
+              ></div>
+            ))}
           </div>
         </div>
       </div>
