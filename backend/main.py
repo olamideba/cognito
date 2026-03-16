@@ -14,7 +14,7 @@ from pathlib import Path
 from routers import session as session_router
 from routers import memory as memory_router
 from core.session import register, deregister
-from core.db import create_session, get_session, resume_session
+from core.db import create_session, get_session, resume_session, get_memory
 
 load_dotenv()
 
@@ -109,7 +109,7 @@ GEMINI_WS_URL = (
 )
 
 
-def _build_setup_message() -> dict:
+def _build_setup_message(memory: Optional[Dict[str, Any]] = None) -> dict:
     """Build the initial setup JSON frame from the live config."""
     cfg = get_live_config()
 
@@ -126,6 +126,18 @@ def _build_setup_message() -> dict:
                 raise ValueError(f"Unsupported tool type: {tool.type}")
         return serialized
 
+    system_parts = [{"text": cfg.systemInstruction}]
+    if memory:
+        memory_payload = json.dumps(memory, ensure_ascii=False)
+        system_parts.append(
+            {
+                "text": (
+                    "User memory (read-only context, may be stale):\n"
+                    f"{memory_payload}"
+                )
+            }
+        )
+
     return {
         "setup": {
             "model": cfg.model,
@@ -137,16 +149,16 @@ def _build_setup_message() -> dict:
                     }
                 },
             },
-            "systemInstruction": {
-                "parts": [{"text": cfg.systemInstruction}]
-            },
+            "systemInstruction": {"parts": system_parts},
             "tools": serialize_tools(cfg.tools),
         }
     }
 
 
 @app.websocket("/ws")
-async def websocket_proxy(ws: WebSocket, session_id: Optional[str] = None, browser_token: Optional[str] = None):
+async def websocket_proxy(ws: WebSocket, 
+session_id: Optional[str] = None, browser_token: Optional[str] = None
+):
     """
     WebSocket proxy: React frontend <-> proxy server <-> Google Gemini Live API.
     """
@@ -154,6 +166,7 @@ async def websocket_proxy(ws: WebSocket, session_id: Optional[str] = None, brows
     print("[proxy] Client Connected")
 
     active_session_id = None
+    memory: Optional[Dict[str, Any]] = None
     if session_id:
         existing = await get_session(session_id)
         if existing:
@@ -168,6 +181,9 @@ async def websocket_proxy(ws: WebSocket, session_id: Optional[str] = None, brows
 
     register(ws, active_session_id)
     await ws.send_json({"type": "session_created", "session_id": active_session_id})
+
+    if browser_token:
+        memory = await get_memory(browser_token)
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -185,7 +201,7 @@ async def websocket_proxy(ws: WebSocket, session_id: Optional[str] = None, brows
         ) as google_ws:
             print("[proxy] Google Connected")
 
-            setup_msg = _build_setup_message()
+            setup_msg = _build_setup_message(memory)
             await google_ws.send(json.dumps(setup_msg))
             print("[proxy] Setup Sent")
 

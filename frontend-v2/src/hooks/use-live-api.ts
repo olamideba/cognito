@@ -22,6 +22,8 @@ import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
 import { LiveConnectConfig } from "@google/genai";
 
+const SESSION_ID_KEY = "cognito_session_id";
+
 export type UseLiveAPIResults = {
   client: GenAILiveClient;
   setConfig: (config: LiveConnectConfig) => void;
@@ -66,6 +68,13 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
     const onOpen = () => setConnected(true);
     const onClose = () => setConnected(false);
     const onError = (error: ErrorEvent) => console.error("error", error);
+    const onSessionCreated = (sessionId: string) => {
+      try {
+        localStorage.setItem(SESSION_ID_KEY, sessionId);
+      } catch {
+        // ignore storage errors
+      }
+    };
     const stopAudioStreamer = () => audioStreamerRef.current?.stop();
     const onAudio = (data: ArrayBuffer) =>
       audioStreamerRef.current?.addPCM16(new Uint8Array(data));
@@ -74,6 +83,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       .on("error", onError)
       .on("open", onOpen)
       .on("close", onClose)
+      .on("sessioncreated", onSessionCreated)
       .on("interrupted", stopAudioStreamer)
       .on("audio", onAudio);
 
@@ -82,6 +92,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
         .off("error", onError)
         .off("open", onOpen)
         .off("close", onClose)
+        .off("sessioncreated", onSessionCreated)
         .off("interrupted", stopAudioStreamer)
         .off("audio", onAudio)
         .disconnect();
