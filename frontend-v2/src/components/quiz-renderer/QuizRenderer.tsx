@@ -8,20 +8,35 @@ const BACKEND_URL =
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 type Feedback = { correct: boolean; message: string } | null;
+type QuizSubmissionResult = {
+  answer: string;
+  isCorrect: boolean;
+  feedback: string;
+  status: "validated" | "submission_failed";
+};
 
 type QuizRendererProps = {
   quizzes: QuizComponentPayload[];
   sessionId: string | null;
+  onAnswerSubmitted?: (
+    quiz: QuizComponentPayload,
+    result: QuizSubmissionResult
+  ) => void;
 };
 
 function QuizCard({
   quiz,
   sessionId,
   isActive,
+  onAnswerSubmitted,
 }: {
   quiz: QuizComponentPayload;
   sessionId: string | null;
   isActive: boolean;
+  onAnswerSubmitted?: (
+    quiz: QuizComponentPayload,
+    result: QuizSubmissionResult
+  ) => void;
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -45,12 +60,26 @@ function QuizCard({
         }
       );
       const data = await res.json();
+      const result = {
+        answer,
+        isCorrect: data.correct ?? data.is_correct ?? false,
+        feedback: data.feedback ?? (data.is_correct ? "Correct!" : "Incorrect"),
+        status: "validated" as const,
+      };
       setFeedback({
-        correct: data.correct ?? data.is_correct ?? false,
-        message: data.feedback ?? (data.is_correct ? "Correct!" : "Incorrect"),
+        correct: result.isCorrect,
+        message: result.feedback,
       });
+      onAnswerSubmitted?.(quiz, result);
     } catch {
-      setFeedback({ correct: false, message: "Failed to submit answer" });
+      const result = {
+        answer,
+        isCorrect: false,
+        feedback: "Failed to submit answer",
+        status: "submission_failed" as const,
+      };
+      setFeedback({ correct: false, message: result.feedback });
+      onAnswerSubmitted?.(quiz, result);
     }
   };
 
@@ -179,7 +208,11 @@ function QuizCard({
   );
 }
 
-export default function QuizRenderer({ quizzes, sessionId }: QuizRendererProps) {
+export default function QuizRenderer({
+  quizzes,
+  sessionId,
+  onAnswerSubmitted,
+}: QuizRendererProps) {
   if (quizzes.length === 0) {
     return (
       <div className="quiz-renderer__empty">
@@ -202,6 +235,7 @@ export default function QuizRenderer({ quizzes, sessionId }: QuizRendererProps) 
           quiz={quiz}
           sessionId={sessionId}
           isActive={i === 0}
+          onAnswerSubmitted={onAnswerSubmitted}
         />
       ))}
     </div>

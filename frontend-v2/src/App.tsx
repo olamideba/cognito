@@ -18,6 +18,7 @@ import type {
   FlowUpdatePayload,
 } from "./lib/ws-envelope";
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
+import type { Part } from "@google/genai";
 
 const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
@@ -84,6 +85,37 @@ export function AppInner() {
   const [flowScore, setFlowScore] = useState(100);
 
   const { client } = useLiveAPIContext();
+
+  const handleQuizAnswerSubmitted = (
+    quiz: QuizComponentPayload,
+    result: {
+      answer: string;
+      isCorrect: boolean;
+      feedback: string;
+      status: "validated" | "submission_failed";
+    }
+  ) => {
+    const parts: Part[] = [
+      {
+        text:
+          result.status === "validated"
+            ? [
+                `The user answered the quiz question: "${quiz.question}"`,
+                `Selected answer: "${result.answer}".`,
+                `Correct: ${result.isCorrect ? "yes" : "no"}.`,
+                `Feedback: ${result.feedback}.`,
+                "Respond briefly to the user's selection.",
+              ].join(" ")
+            : [
+                `The user tried to answer the quiz question: "${quiz.question}"`,
+                `Selected answer: "${result.answer}".`,
+                "The answer submission could not be validated by the backend.",
+                "Acknowledge that briefly and continue helping.",
+              ].join(" "),
+      },
+    ];
+    client.send(parts, true);
+  };
 
   // Subscribe to envelope events
   useEffect(() => {
@@ -222,7 +254,11 @@ export function AppInner() {
               <AnalogyWhiteboard entries={analogyEntries} />
             )}
             {activeTab === "quiz" && (
-              <QuizRenderer quizzes={quizEntries} sessionId={sessionId} />
+              <QuizRenderer
+                quizzes={quizEntries}
+                sessionId={sessionId}
+                onAnswerSubmitted={handleQuizAnswerSubmitted}
+              />
             )}
           </div>
         </div>
