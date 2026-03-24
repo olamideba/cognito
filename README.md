@@ -74,7 +74,7 @@ This project delivers an end-to-end agentic tutoring experience:
 │   ├── routers/
 │   ├── core/
 │   └── tools/
-├── frontend-v2/
+├── frontend/
 │   ├── src/
 │   └── package.json
 └── README.md
@@ -127,11 +127,11 @@ curl http://localhost:8000/healthz
 ### 2. Frontend
 
 ```bash
-cd frontend-v2
+cd frontend
 npm install
 ```
 
-Create `frontend-v2/.env`:
+Create `frontend/.env`:
 
 ```bash
 VITE_BACKEND_URL=http://localhost:8000

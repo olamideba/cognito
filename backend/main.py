@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import json
 import os
+import base64
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -23,6 +24,8 @@ from core.db import create_session, get_session, resume_session, get_memory
 from tools.registry import TOOL_DECLARATIONS
 from tools.handlers import set_live_context
 from flow import handle_flow_signal
+
+from services.live_events import serialize_event, build_reconnect_message
 
 from agent import agent
 from google.adk import telemetry as adk_telemetry
@@ -134,53 +137,6 @@ def get_live_config() -> LiveConfigResponse:
         responseModalities=["AUDIO"],
         voiceName=os.getenv("COGNITO_VOICE_NAME", "Aoede"),
     )
-
-
-
-import base64
-
-def serialize_event(event) -> Optional[str]:
-    if getattr(event, "interrupted", False):
-        return json.dumps({"serverContent": {"interrupted": True}})
-    
-    if getattr(event, "turn_complete", False):
-        return json.dumps({"serverContent": {"turnComplete": True}})
-    
-    if hasattr(event, "actions") and getattr(event, "actions", None) and getattr(event.actions, "function_calls", None):
-        function_calls = []
-        for call in event.actions.function_calls:
-            function_calls.append({
-                "id": getattr(call, "id", None),
-                "name": call.name,
-                "args": getattr(call, "args", {}),
-            })
-        if function_calls:
-            return json.dumps({"toolCall": {"functionCalls": function_calls}})
-    
-    if getattr(event, "content", None) and getattr(event.content, "parts", None):
-        parts = []
-        for part in event.content.parts:
-            if getattr(part, "inline_data", None):
-                b64_data = base64.b64encode(part.inline_data.data).decode('utf-8')
-                parts.append({
-                    "inlineData": {
-                        "mimeType": part.inline_data.mime_type,
-                        "data": b64_data
-                    }
-                })
-            elif getattr(part, "text", None):
-                parts.append({"text": part.text})
-        if parts:
-            return json.dumps({
-                "serverContent": {
-                    "modelTurn": {
-                        "parts": parts
-                    }
-                }
-            })
-            
-    return None
-
 
 @app.websocket("/ws")
 async def websocket_proxy(ws: WebSocket, 
@@ -300,36 +256,9 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
                 await ws.send_json({"setupComplete": {}})
                 
                 if is_reconnect and session_snapshot:
-                    goal = session_snapshot.get("goal")
-                    time_limit_seconds = session_snapshot.get("time_limit_seconds")
-                    start_time = session_snapshot.get("start_time")
-                    remaining_minutes = None
-                    if time_limit_seconds and start_time:
-                        try:
-                            start_dt = datetime.fromisoformat(start_time)
-                            if start_dt.tzinfo is None:
-                                start_dt = start_dt.replace(tzinfo=timezone.utc)
-                            elapsed = (datetime.now(timezone.utc) - start_dt).total_seconds()
-                            remaining_seconds = max(0, time_limit_seconds - elapsed)
-                            remaining_minutes = max(0, int(remaining_seconds // 60))
-                        except Exception:
-                            remaining_minutes = None
-                    if goal or time_limit_seconds or remaining_minutes is not None:
-                        parts = []
-                        if goal:
-                            parts.append(f"Goal: {goal}.")
-                        if remaining_minutes is not None:
-                            parts.append(f"Remaining time: {remaining_minutes} minutes.")
-                        elif time_limit_seconds:
-                            minutes = int(time_limit_seconds) // 60
-                            parts.append(f"Time limit: {minutes} minutes.")
-                        parts.append("Continue without re-asking for any already-known fields.")
-                        live_request_queue.send_content(
-                            types.Content(
-                                role="user",
-                                parts=[types.Part(text=" ".join(parts))],
-                            )
-                        )
+                    content = build_reconnect_message(session_snapshot)
+                    if content is not None:
+                        live_request_queue.send_content(content)
                 
                 
                 async for event in runner.run_live(
@@ -364,4 +293,3 @@ session_id: Optional[str] = None, browser_token: Optional[str] = None
             except Exception:
                 pass
         print("[proxy] Session ended")
-        
