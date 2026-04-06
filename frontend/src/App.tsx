@@ -7,6 +7,7 @@ import AnalogyWhiteboard from "./components/analogy-whiteboard/AnalogyWhiteboard
 import type { AnalogyEntry } from "./components/analogy-whiteboard/AnalogyWhiteboard";
 import QuizRenderer from "./components/quiz-renderer/QuizRenderer";
 import ControlTray from "./components/control-tray/ControlTray";
+import LandingPage from "./components/landing-page/LandingPage";
 import cn from "classnames";
 // import type { LiveClientOptions } from "./types";
 import { fetchLiveConfig } from "./api";
@@ -279,6 +280,7 @@ export function AppInner() {
 function App() {
   const [backendState, setBackendState] = useState<BackendState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     fetchLiveConfig()
@@ -367,6 +369,19 @@ function App() {
             RETRY
           </button>
         </div>
+      </div>
+    );
+  }
+
+  /* ── INTEGRATION POINT ──
+   * When showLanding is true, render the landing/onboarding page.
+   * Clicking START SESSION sets showLanding to false, which mounts
+   * the LiveAPIProvider and starts the WebSocket handshake.
+   */
+  if (showLanding) {
+    return (
+      <div className="App">
+        <LandingPage onStartSession={() => setShowLanding(false)} />
       </div>
     );
   }
