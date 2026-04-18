@@ -51,7 +51,7 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
               className="landing__cta"
               onClick={onStartSession}
             >
-              START SESSION
+              CONTINUE
             </button>
             <div className="landing__cta-outline" />
           </div>

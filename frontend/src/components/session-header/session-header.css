@@ -1,38 +1,31 @@
 .session-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: 40px;
-  padding: 0 1rem;
-  background-color: var(--color-black);
-  color: var(--color-white);
+  gap: 1.5rem;
   font-family: var(--font-primary);
-  border-bottom: 3px solid var(--color-black);
-  flex-shrink: 0;
 }
 
 .session-header__goal {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
   cursor: pointer;
   user-select: none;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .session-header__goal.expanded {
   white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  max-width: 70%;
 }
 
 .session-header__timer {
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #777;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.05em;
 }
@@ -47,13 +40,8 @@
   50% { opacity: 0.5; }
 }
 
-.session-header--complete {
-  background-color: var(--color-black);
-  justify-content: center;
-}
-
-.session-header--complete .session-header__label {
-  font-size: 1rem;
+.session-header__label {
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;

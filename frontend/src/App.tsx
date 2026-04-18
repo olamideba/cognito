@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import "./Brutalist.css";
 import { LiveAPIProvider } from "./contexts/LiveAPIContext";
-import SidePanel from "./components/side-panel/SidePanel";
+import Logger from "./components/logger/Logger";
+import SettingsDialog from "./components/settings-dialog/SettingsDialog";
 import SessionHeader from "./components/session-header/SessionHeader";
 import AnalogyWhiteboard from "./components/analogy-whiteboard/AnalogyWhiteboard";
 import type { AnalogyEntry } from "./components/analogy-whiteboard/AnalogyWhiteboard";
@@ -19,7 +20,9 @@ import type {
   FlowUpdatePayload,
 } from "./lib/ws-envelope";
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
+import { useLoggerStore } from "./lib/store-logger";
 import type { Part } from "@google/genai";
+import { ArrowUp, AudioLines, Square } from "lucide-react";
 
 const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
@@ -67,9 +70,13 @@ type BackendState = "loading" | "ready" | "error";
 export function AppInner() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [_videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [activeTab, setActiveTab] = useState<"screen" | "whiteboard" | "quiz">(
-    "whiteboard"
-  );
+
+  // Logger / transcript state (lifted from old SidePanel)
+  const loggerRef = useRef<HTMLDivElement>(null);
+  const loggerLastHeightRef = useRef<number>(-1);
+  const { log, logs } = useLoggerStore();
+  const [textInput, setTextInput] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // -- Lifted state from envelopes --
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -84,8 +91,19 @@ export function AppInner() {
   const [analogyEntries, setAnalogyEntries] = useState<AnalogyEntry[]>([]);
   const [quizEntries, setQuizEntries] = useState<QuizComponentPayload[]>([]);
   const [flowScore, setFlowScore] = useState(100);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const { client } = useLiveAPIContext();
+  const { client, connected, connect, disconnect } = useLiveAPIContext();
+  const transcriptPlaceholder = connected
+    ? "Optionally send a message ..."
+    : "Connect voice to enable chat";
+  const hasTextInput = textInput.trim().length > 0;
+
+  useEffect(() => {
+    if (connected) {
+      setIsConnecting(false);
+    }
+  }, [connected]);
 
   const handleQuizAnswerSubmitted = (
     quiz: QuizComponentPayload,
@@ -145,14 +163,12 @@ export function AppInner() {
             },
             ...prev,
           ]);
-          setActiveTab("whiteboard");
           break;
         }
 
         case "quiz_component": {
           const q = envelope.payload as QuizComponentPayload;
           setQuizEntries((prev) => [q, ...prev]);
-          setActiveTab("quiz");
           break;
         }
 
@@ -173,103 +189,198 @@ export function AppInner() {
     };
   }, [client]);
 
+  // Auto-scroll logger
+  useEffect(() => {
+    if (loggerRef.current) {
+      const el = loggerRef.current;
+      const scrollHeight = el.scrollHeight;
+      if (scrollHeight !== loggerLastHeightRef.current) {
+        el.scrollTop = scrollHeight;
+        loggerLastHeightRef.current = scrollHeight;
+      }
+    }
+  }, [logs]);
+
+  // Subscribe to logger events
+  useEffect(() => {
+    client.on("log", log);
+    return () => {
+      client.off("log", log);
+    };
+  }, [client, log]);
+
+  // Text input handler
+  const handleSubmit = () => {
+    if (!textInput.trim()) return;
+    client.send([{ text: textInput }]);
+    setTextInput("");
+  };
+
+  const handleVoiceConnect = async () => {
+    try {
+      setIsConnecting(true);
+      await connect();
+    } catch (error) {
+      setIsConnecting(false);
+      throw error;
+    }
+  };
+
+  const handleInputAction = async () => {
+    if (!connected) {
+      await handleVoiceConnect();
+      return;
+    }
+
+    if (hasTextInput) {
+      handleSubmit();
+      return;
+    }
+
+    await disconnect();
+  };
+
   return (
     <div className="app-layout">
-      <main className="app-main">
-        <SidePanel />
-        <div className="workspace">
-          <SessionHeader
-            status={sessionStatus}
-            goal={sessionGoal}
-            totalSeconds={sessionTotalSeconds}
-            startTime={sessionStartTime}
-          />
-          <div className="context-tabs">
-            <button
-              className={cn("context-tab", { active: activeTab === "screen" })}
-              onClick={() => setActiveTab("screen")}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: "1rem",
-                  verticalAlign: "middle",
-                  marginRight: "6px",
-                }}
-              >
-                present_to_all
-              </span>
-              Screen View
-            </button>
-            <button
-              className={cn("context-tab", {
-                active: activeTab === "whiteboard",
-              })}
-              onClick={() => setActiveTab("whiteboard")}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: "1rem",
-                  verticalAlign: "middle",
-                  marginRight: "6px",
-                }}
-              >
-                analytics
-              </span>
-              Analogy Whiteboard
-            </button>
-            <button
-              className={cn("context-tab", { active: activeTab === "quiz" })}
-              onClick={() => setActiveTab("quiz")}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: "1rem",
-                  verticalAlign: "middle",
-                  marginRight: "6px",
-                }}
-              >
-                quiz
-              </span>
-              Socratic Quiz
-            </button>
-          </div>
-          <div className="workspace-content">
-            {/* Screen video is always rendered but hidden when not active, so videoRef stays attached */}
-            <video
-              className={cn("stream")}
-              ref={videoRef}
-              autoPlay
-              playsInline
-              style={{
-                display: activeTab === "screen" ? "block" : "none",
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                border: "3px solid #000",
-              }}
-            />
-            {activeTab === "whiteboard" && (
-              <AnalogyWhiteboard entries={analogyEntries} />
-            )}
-            {activeTab === "quiz" && (
-              <QuizRenderer
-                quizzes={quizEntries}
-                sessionId={sessionId}
-                onAnswerSubmitted={handleQuizAnswerSubmitted}
-              />
-            )}
-          </div>
+      {/* ─── Top Header ─── */}
+      <header className="top-header">
+        <div className="top-header__brand">COGNITO</div>
+        <SessionHeader
+          status={sessionStatus}
+          goal={sessionGoal}
+          totalSeconds={sessionTotalSeconds}
+          startTime={sessionStartTime}
+        />
+        <div className="top-header__actions">
+          <SettingsDialog />
         </div>
+      </header>
+
+      {/* ─── Main 3-Column Area ─── */}
+      <main className="session-main">
+        {/* Left Drawer: Analogies */}
+        <aside className="session-drawer session-drawer--left">
+          <AnalogyWhiteboard entries={analogyEntries} />
+        </aside>
+
+        {/* Center Workspace */}
+        <section className="session-center">
+          {/* Feed Status */}
+          <div className="feed-status">
+            <div className="feed-status__info">
+              <span className="feed-status__label">Feed Status</span>
+              <span className="feed-status__value">
+                {connected ? "Live Stream Active" : "Disconnected"}
+              </span>
+            </div>
+            <div className="feed-status__dots">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={cn("feed-status__dot", {
+                    active: connected && i < 2,
+                  })}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Transcript Card */}
+          <div className="transcript-card">
+            <div className="transcript-card__accent" />
+            <header className="transcript-card__header">
+              <div>
+                <span className="transcript-card__tag">System 01</span>
+                <h1 className="transcript-card__title">Session Transcript</h1>
+              </div>
+            </header>
+            <div className="transcript-card__body" ref={loggerRef}>
+              <Logger filter="conversations" />
+            </div>
+
+            {/* Text Input */}
+            <div
+              className={cn("transcript-card__input", {
+                disconnected: !connected,
+              })}
+            >
+              <textarea
+                ref={inputRef}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                placeholder={transcriptPlaceholder}
+                disabled={!connected}
+              />
+              <button
+                className={cn("transcript-card__action", {
+                  connecting: isConnecting && !connected,
+                })}
+                onClick={() => {
+                  void handleInputAction();
+                }}
+                title={
+                  !connected
+                    ? isConnecting
+                      ? "Connecting voice"
+                      : "Connect voice"
+                    : hasTextInput
+                      ? "Send message"
+                      : "Disconnect"
+                }
+                aria-label={
+                  !connected
+                    ? isConnecting
+                      ? "Connecting voice"
+                      : "Connect voice"
+                    : hasTextInput
+                      ? "Send message"
+                      : "Disconnect"
+                }
+              >
+                {!connected ? (
+                  <AudioLines size={20} />
+                ) : hasTextInput ? (
+                  <ArrowUp size={20} />
+                ) : (
+                  <Square size={18} fill="currentColor" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Video (always rendered for ref, hidden when not capturing) */}
+          <video
+            className={cn("stream")}
+            ref={videoRef}
+            autoPlay
+            playsInline
+            style={{ display: "none" }}
+          />
+        </section>
+
+        {/* Right Drawer: Quiz */}
+        <aside className="session-drawer session-drawer--right">
+          <QuizRenderer
+            quizzes={quizEntries}
+            sessionId={sessionId}
+            onAnswerSubmitted={handleQuizAnswerSubmitted}
+          />
+        </aside>
       </main>
+
+      {/* ─── Control Bar ─── */}
       <div className="control-bar">
         <ControlTray
           videoRef={videoRef}
           supportsVideo={true}
           onVideoStreamChange={setVideoStream}
-          enableEditingSettings={true}
+          enableEditingSettings={false}
           flowScore={flowScore}
         />
       </div>

@@ -9,9 +9,10 @@ type SessionHeaderProps = {
 };
 
 function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export default function SessionHeader({
@@ -55,9 +56,9 @@ export default function SessionHeader({
     (remaining !== null && remaining <= 0 && status === "active")
   ) {
     return (
-      <div className="session-header session-header--complete">
+      <nav className="session-header">
         <span className="session-header__label">SESSION COMPLETE</span>
-      </div>
+      </nav>
     );
   }
 
@@ -68,25 +69,27 @@ export default function SessionHeader({
     remaining / totalSeconds <= 0.1;
 
   const displayGoal =
-    goal && !goalExpanded && goal.length > 80
-      ? goal.slice(0, 80) + "…"
-      : goal ?? "Awaiting session goal";
+    goal && !goalExpanded && goal.length > 40
+      ? goal.slice(0, 40) + "…"
+      : goal ?? "--";
 
   const displayTimer =
-    status === "active" && remaining !== null ? formatTime(remaining) : "--:--";
+    status === "active" && remaining !== null
+      ? formatTime(remaining)
+      : "--:--:--";
 
   return (
-    <div className="session-header">
+    <nav className="session-header">
       <span
         className={`session-header__goal${goalExpanded ? " expanded" : ""}`}
         onClick={() => setGoalExpanded((v) => !v)}
         title={goal ?? "Awaiting session goal"}
       >
-        GOAL: {displayGoal}
+        SESSION GOAL: {displayGoal}
       </span>
       <span className={`session-header__timer${isWarning ? " warning" : ""}`}>
         {displayTimer}
       </span>
-    </div>
+    </nav>
   );
 }
