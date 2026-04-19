@@ -22,8 +22,10 @@ import type {
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
 import { useLoggerStore } from "./lib/store-logger";
 import type { Part } from "@google/genai";
-import { ArrowUp, AudioLines, Square } from "lucide-react";
-
+import { ArrowUp, AudioLines, Square, PanelLeftClose, PanelRightClose } from "lucide-react";
+import { useWebcam } from "./hooks/use-webcam";
+import { useScreenCapture } from "./hooks/use-screen-capture";
+import type { UseMediaStreamResult } from "./hooks/use-media-stream-mux";
 const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 const WS_URL = BACKEND_BASE.replace(/^http/, "ws") + "/ws";
@@ -92,6 +94,11 @@ export function AppInner() {
   const [quizEntries, setQuizEntries] = useState<QuizComponentPayload[]>([]);
   const [flowScore, setFlowScore] = useState(100);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [activeDrawer, setActiveDrawer] = useState<'none' | 'analogy' | 'quiz'>('none');
+
+  const webcam = useWebcam();
+  const screenCapture = useScreenCapture();
+  const [muted, setMuted] = useState(false);
 
   const { client, connected, connect, disconnect } = useLiveAPIContext();
   const transcriptPlaceholder = connected
@@ -163,12 +170,14 @@ export function AppInner() {
             },
             ...prev,
           ]);
+          setActiveDrawer('analogy');
           break;
         }
 
         case "quiz_component": {
           const q = envelope.payload as QuizComponentPayload;
           setQuizEntries((prev) => [q, ...prev]);
+          setActiveDrawer('quiz');
           break;
         }
 
@@ -257,31 +266,47 @@ export function AppInner() {
       </header>
 
       {/* ─── Main 3-Column Area ─── */}
-      <main className="session-main">
+      <main className={`session-main state-${activeDrawer}`}>
         {/* Left Drawer: Analogies */}
         <aside className="session-drawer session-drawer--left">
-          <AnalogyWhiteboard entries={analogyEntries} />
+          {activeDrawer === 'analogy' ? (
+            <>
+              <button 
+                className="drawer-collapse-btn drawer-collapse-btn--left" 
+                onClick={() => setActiveDrawer('none')}
+                title="Collapse Analogy Window"
+              >
+                <PanelLeftClose size={22} />
+              </button>
+              <AnalogyWhiteboard entries={analogyEntries} />
+            </>
+          ) : (
+            <div className="drawer-handle" onClick={() => setActiveDrawer('analogy')}>
+              <span>ANALOGIES</span>
+            </div>
+          )}
         </aside>
 
         {/* Center Workspace */}
         <section className="session-center">
-          {/* Feed Status */}
           <div className="feed-status">
-            <div className="feed-status__info">
-              <span className="feed-status__label">Feed Status</span>
-              <span className="feed-status__value">
-                {connected ? "Live Stream Active" : "Disconnected"}
-              </span>
-            </div>
-            <div className="feed-status__dots">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={cn("feed-status__dot", {
-                    active: connected && i < 2,
-                  })}
-                />
-              ))}
+            <span className="feed-status__label">FEED STATUS</span>
+            <div className="feed-status__sensors">
+              {/* VOICE */}
+              <div className={cn("sensor-indicator", { active: connected && !muted })}>
+                <span className="sensor-indicator__square"></span>
+                <span>VOICE</span>
+              </div>
+              {/* SCREEN */}
+              <div className={cn("sensor-indicator", { active: screenCapture.isStreaming })}>
+                <span className="sensor-indicator__square"></span>
+                <span>SCREEN</span>
+              </div>
+              {/* CAMERA */}
+              <div className={cn("sensor-indicator", { active: webcam.isStreaming })}>
+                <span className="sensor-indicator__square"></span>
+                <span>CAMERA</span>
+              </div>
             </div>
           </div>
 
@@ -290,12 +315,12 @@ export function AppInner() {
             <div className="transcript-card__accent" />
             <header className="transcript-card__header">
               <div>
-                <span className="transcript-card__tag">System 01</span>
+                <span className="transcript-card__tag">Agent</span>
                 <h1 className="transcript-card__title">Session Transcript</h1>
               </div>
             </header>
             <div className="transcript-card__body" ref={loggerRef}>
-              <Logger filter="conversations" />
+              <Logger filter="none" />
             </div>
 
             {/* Text Input */}
@@ -366,11 +391,26 @@ export function AppInner() {
 
         {/* Right Drawer: Quiz */}
         <aside className="session-drawer session-drawer--right">
-          <QuizRenderer
-            quizzes={quizEntries}
-            sessionId={sessionId}
-            onAnswerSubmitted={handleQuizAnswerSubmitted}
-          />
+          {activeDrawer === 'quiz' ? (
+            <>
+              <button 
+                className="drawer-collapse-btn drawer-collapse-btn--right" 
+                onClick={() => setActiveDrawer('none')}
+                title="Collapse Quiz Window"
+              >
+                <PanelRightClose size={22} />
+              </button>
+              <QuizRenderer
+                quizzes={quizEntries}
+                sessionId={sessionId}
+                onAnswerSubmitted={handleQuizAnswerSubmitted}
+              />
+            </>
+          ) : (
+            <div className="drawer-handle" onClick={() => setActiveDrawer('quiz')}>
+              <span>SOCRATIC QUIZ</span>
+            </div>
+          )}
         </aside>
       </main>
 
@@ -382,6 +422,10 @@ export function AppInner() {
           onVideoStreamChange={setVideoStream}
           enableEditingSettings={false}
           flowScore={flowScore}
+          webcam={webcam}
+          screenCapture={screenCapture}
+          muted={muted}
+          setMuted={setMuted}
         />
       </div>
     </div>

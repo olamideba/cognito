@@ -216,13 +216,8 @@ export default function QuizRenderer({
   if (quizzes.length === 0) {
     return (
       <div className="quiz-renderer__empty">
-        <span
-          className="material-symbols-outlined"
-          style={{ fontSize: "3rem" }}
-        >
-          psychology
-        </span>
-        SOCRATIC QUIZ — WAITING FOR QUESTIONS
+        <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#777', marginBottom: '16px' }}>Socratic Quiz</p>
+        <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'rgba(119,119,119,0.5)', fontStyle: 'italic' }}>Quiz will appear when needed</p>
       </div>
     );
   }

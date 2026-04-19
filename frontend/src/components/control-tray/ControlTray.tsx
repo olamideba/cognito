@@ -2,8 +2,8 @@ import cn from "classnames";
 
 import { memo, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import {
-  Camera,
-  CameraOff,
+  Video,
+  VideoOff,
   Mic,
   MicOff,
   MonitorStop,
@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
-import { useScreenCapture } from "../../hooks/use-screen-capture";
-import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import SettingsDialog from "../settings-dialog/SettingsDialog";
 
@@ -23,6 +21,10 @@ export type ControlTrayProps = {
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
   flowScore?: number;
+  webcam: UseMediaStreamResult;
+  screenCapture: UseMediaStreamResult;
+  muted: boolean;
+  setMuted: (muted: boolean) => void;
 };
 
 function ControlTray({
@@ -32,14 +34,16 @@ function ControlTray({
   supportsVideo,
   enableEditingSettings,
   flowScore = 100,
+  webcam,
+  screenCapture,
+  muted,
+  setMuted,
 }: ControlTrayProps) {
-  const videoStreams = [useWebcam(), useScreenCapture()];
+  const videoStreams = [webcam, screenCapture];
   const [activeVideoStream, setActiveVideoStream] =
     useState<MediaStream | null>(null);
-  const [webcam, screenCapture] = videoStreams;
   const [inVolume, setInVolume] = useState(0);
   const [audioRecorder] = useState(() => new AudioRecorder());
-  const [muted, setMuted] = useState(false);
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const { client, connected } = useLiveAPIContext();
@@ -173,7 +177,7 @@ function ControlTray({
               aria-label={webcam.isStreaming ? "Camera off" : "Camera on"}
               disabled={utilityDisabled}
             >
-              {webcam.isStreaming ? <CameraOff size={22} /> : <Camera size={22} />}
+              {webcam.isStreaming ? <Video size={22} /> : <VideoOff size={22} />}
             </button>
           </>
         )}
