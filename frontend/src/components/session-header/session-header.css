@@ -3,6 +3,7 @@
   align-items: center;
   gap: 1.5rem;
   font-family: var(--font-primary);
+  min-width: 0;
 }
 
 .session-header__goal {
@@ -16,6 +17,9 @@
   user-select: none;
   letter-spacing: 0.05em;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .session-header__goal.expanded {
@@ -28,6 +32,7 @@
   color: #777;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
 .session-header__timer.warning {
@@ -45,4 +50,20 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+@media (max-width: 768px) {
+  .session-header {
+    gap: 0.35rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-header__goal {
+    max-width: 58vw;
+  }
+
+  .session-header__timer {
+    font-size: 0.6875rem;
+  }
 }
