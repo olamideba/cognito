@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Select from "react-select";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 
@@ -12,6 +12,10 @@ const voiceOptions = [
 
 export default function VoiceSelector() {
   const { config, setConfig } = useLiveAPIContext();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [menuPortalTarget, setMenuPortalTarget] = useState<HTMLElement | null>(
+    null
+  );
 
   useEffect(() => {
     const voiceName =
@@ -21,10 +25,14 @@ export default function VoiceSelector() {
     setSelectedOption(voiceOption);
   }, [config]);
 
+  useEffect(() => {
+    setMenuPortalTarget(containerRef.current?.closest("dialog") ?? null);
+  }, []);
+
   const [selectedOption, setSelectedOption] = useState<{
     value: string;
     label: string;
-  } | null>(voiceOptions[5]);
+  } | null>(voiceOptions[0]);
 
   const updateConfig = useCallback(
     (voiceName: string) => {
@@ -43,7 +51,7 @@ export default function VoiceSelector() {
   );
 
   return (
-    <div className="select-group">
+    <div className="select-group" ref={containerRef}>
       <label htmlFor="voice-selector">Voice</label>
       <Select
         id="voice-selector"
@@ -52,6 +60,16 @@ export default function VoiceSelector() {
         value={selectedOption}
         defaultValue={selectedOption}
         options={voiceOptions}
+        maxMenuHeight={240}
+        menuPlacement="auto"
+        menuPosition="fixed"
+        menuPortalTarget={menuPortalTarget}
+        styles={{
+          menuPortal: (base) => ({
+            ...base,
+            zIndex: 1000,
+          }),
+        }}
         onChange={(e) => {
           setSelectedOption(e);
           if (e) {

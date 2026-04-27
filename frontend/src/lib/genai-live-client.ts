@@ -56,6 +56,18 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     this._url = options.url;
   }
 
+  private buildUrl(config: LiveConnectConfig): string {
+    const url = new URL(this._url);
+    const voiceName =
+      config.speechConfig?.voiceConfig?.prebuiltVoiceConfig?.voiceName;
+
+    if (voiceName) {
+      url.searchParams.set("voice_name", voiceName);
+    }
+
+    return url.toString();
+  }
+
   async connect(model: string, config: LiveConnectConfig): Promise<boolean> {
     if (this._status !== "disconnected") return false;
 
@@ -64,7 +76,7 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     this.config = config;
 
     return new Promise<boolean>((resolve) => {
-      const ws = new WebSocket(this._url);
+      const ws = new WebSocket(this.buildUrl(config));
       this._ws = ws;
 
       ws.onopen = () => {

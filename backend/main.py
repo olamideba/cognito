@@ -13,6 +13,8 @@ from google.genai import types
 from routers import session as session_router
 from routers import memory as memory_router
 from routers import generate as generate_router
+from routers import live as live_router
+
 from core.session import register, deregister
 from core.db import (
     create_session,
@@ -20,12 +22,15 @@ from core.db import (
     resume_session,
     get_memory, # noqa: F401, F841
 )  
+from core.live_defaults import (
+    get_default_response_modalities,
+    resolve_voice_name,
+)
 from tools.handlers import set_live_context
 from flow import handle_flow_signal
 
 from services.live_events import serialize_event, build_reconnect_message
 from scripts.adk_patch import patch_adk_trace_tool_call
-
 from agent import agent
 from google.adk.runners import Runner
 from google.adk.agents.run_config import RunConfig, StreamingMode
@@ -33,6 +38,8 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.agents.live_request_queue import LiveRequestQueue
 
 patch_adk_trace_tool_call()
+
+
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -63,6 +70,7 @@ def healthcheck() -> Dict[str, str]:
 app.include_router(session_router.router)
 app.include_router(memory_router.router)
 app.include_router(generate_router.router)
+app.include_router(live_router.router)
 
 
 @app.get("/")
@@ -72,7 +80,7 @@ def root() -> Dict[str, str]:
 
 @app.websocket("/ws")
 async def websocket_proxy(
-    ws: WebSocket, session_id: Optional[str] = None, browser_token: Optional[str] = None
+    ws: WebSocket, session_id: Optional[str] = None, browser_token: Optional[str] = None, voice_name: Optional[str] = None
 ):
     """
     WebSocket proxy: React frontend <-> proxy server <-> Google Gemini Live API.
@@ -114,13 +122,14 @@ async def websocket_proxy(
     #     return
 
     try:
+        resolved_voice_name = resolve_voice_name(voice_name)
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
-            response_modalities=[types.Modality.AUDIO],
+            response_modalities=get_default_response_modalities(),
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
                     prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name=os.getenv("COGNITO_VOICE_NAME", "Aoede")
+                        voice_name=resolved_voice_name
                     )
                 )
             ),
@@ -203,7 +212,9 @@ async def websocket_proxy(
                         await ws.send_text(event_json_str)
 
             except Exception as e:
+                import traceback
                 print(f"[proxy] downstream_task error: {e}")
+                traceback.print_exc()
 
         await asyncio.gather(upstream_task(), downstream_task())
 

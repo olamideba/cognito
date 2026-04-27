@@ -25,7 +25,6 @@ import type { Part } from "@google/genai";
 import { ArrowUp, AudioLines, Square, PanelLeftClose, PanelRightClose } from "lucide-react";
 import { useWebcam } from "./hooks/use-webcam";
 import { useScreenCapture } from "./hooks/use-screen-capture";
-import type { UseMediaStreamResult } from "./hooks/use-media-stream-mux";
 const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 const WS_URL = BACKEND_BASE.replace(/^http/, "ws") + "/ws";
