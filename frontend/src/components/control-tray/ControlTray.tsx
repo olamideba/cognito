@@ -2,19 +2,15 @@ import cn from "classnames";
 
 import { memo, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import {
-  Camera,
-  CameraOff,
+  Video,
+  VideoOff,
   Mic,
   MicOff,
   MonitorStop,
   MonitorUp,
-  Pause,
-  Play,
 } from "lucide-react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
-import { useScreenCapture } from "../../hooks/use-screen-capture";
-import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import SettingsDialog from "../settings-dialog/SettingsDialog";
 
@@ -25,6 +21,10 @@ export type ControlTrayProps = {
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
   flowScore?: number;
+  webcam: UseMediaStreamResult;
+  screenCapture: UseMediaStreamResult;
+  muted: boolean;
+  setMuted: (muted: boolean) => void;
 };
 
 function ControlTray({
@@ -34,25 +34,20 @@ function ControlTray({
   supportsVideo,
   enableEditingSettings,
   flowScore = 100,
+  webcam,
+  screenCapture,
+  muted,
+  setMuted,
 }: ControlTrayProps) {
-  const videoStreams = [useWebcam(), useScreenCapture()];
+  const videoStreams = [webcam, screenCapture];
   const [activeVideoStream, setActiveVideoStream] =
     useState<MediaStream | null>(null);
-  const [webcam, screenCapture] = videoStreams;
   const [inVolume, setInVolume] = useState(0);
   const [audioRecorder] = useState(() => new AudioRecorder());
-  const [muted, setMuted] = useState(false);
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
-  const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { client, connected, connect, disconnect } =
-    useLiveAPIContext();
+  const { client, connected } = useLiveAPIContext();
 
-  useEffect(() => {
-    if (!connected && connectButtonRef.current) {
-      connectButtonRef.current.focus();
-    }
-  }, [connected]);
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--volume",
@@ -129,29 +124,23 @@ function ControlTray({
     videoStreams.filter((msr) => msr !== next).forEach((msr) => msr.stop());
   };
 
-  return (
-    <section className="control-tray-brutalist" style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
-      <canvas style={{ display: "none" }} ref={renderCanvasRef} />
-      <nav className={cn("control-bar-left", { disabled: !connected })} style={{ display: "flex", gap: "1rem" }}>
-        {/* Connection Button */}
-        <button
-          ref={connectButtonRef}
-          className={cn("brutalist-btn", "control-tray-btn", {
-            connected,
-          })}
-          onClick={connected ? disconnect : connect}
-          title={connected ? "Disconnect mentor" : "Connect mentor"}
-          aria-label={connected ? "Disconnect mentor" : "Connect mentor"}
-        >
-          {connected ? <Pause size={22} /> : <Play size={22} />}
-        </button>
+  const utilityDisabled = !connected;
 
+  return (
+    <section className="control-tray-brutalist">
+      <canvas style={{ display: "none" }} ref={renderCanvasRef} />
+      <nav
+        className={cn("control-bar-utilities", {
+          disabled: utilityDisabled,
+        })}
+      >
         {/* Mic Button */}
         <button
-          className={cn("brutalist-btn", "control-tray-btn")}
+          className={cn("brutalist-btn", "control-tray-btn", "control-tray-btn--utility")}
           onClick={() => setMuted(!muted)}
           title={!muted ? "Mic on" : "Mic off"}
           aria-label={!muted ? "Mic on" : "Mic off"}
+          disabled={utilityDisabled}
         >
           {!muted ? <Mic size={22} /> : <MicOff size={22} />}
         </button>
@@ -159,7 +148,7 @@ function ControlTray({
         {supportsVideo && (
           <>
             <button
-              className={cn("brutalist-btn", "control-tray-btn")}
+              className={cn("brutalist-btn", "control-tray-btn", "control-tray-btn--utility")}
               onClick={
                 screenCapture.isStreaming
                   ? changeStreams()
@@ -171,6 +160,7 @@ function ControlTray({
               aria-label={
                 screenCapture.isStreaming ? "Stop screen share" : "Share screen"
               }
+              disabled={utilityDisabled}
             >
               {screenCapture.isStreaming ? (
                 <MonitorStop size={22} />
@@ -179,24 +169,25 @@ function ControlTray({
               )}
             </button>
             <button
-              className={cn("brutalist-btn", "control-tray-btn")}
+              className={cn("brutalist-btn", "control-tray-btn", "control-tray-btn--utility")}
               onClick={
                 webcam.isStreaming ? changeStreams() : changeStreams(webcam)
               }
               title={webcam.isStreaming ? "Camera off" : "Camera on"}
               aria-label={webcam.isStreaming ? "Camera off" : "Camera on"}
+              disabled={utilityDisabled}
             >
-              {webcam.isStreaming ? <CameraOff size={22} /> : <Camera size={22} />}
+              {webcam.isStreaming ? <Video size={22} /> : <VideoOff size={22} />}
             </button>
           </>
         )}
         {children}
       </nav>
 
-      <div className="control-bar-right" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span className="brutalist-body" style={{ fontWeight: "bold" }}>FLOW STATE:</span>
-          <div style={{ display: "flex", gap: "4px", height: "30px", alignItems: "flex-end" }}>
+      <div className="control-bar-right">
+        <div className="flow-state-meter">
+          <span className="brutalist-body flow-state-meter__label">FLOW STATE:</span>
+          <div className="flow-state-meter__bars">
             {[10, 15, 20, 25, 30].map((h, i) => (
               <div
                 key={i}
@@ -208,7 +199,7 @@ function ControlTray({
                   boxSizing: "border-box",
                   transition: "background-color 150ms"
                 }}
-              ></div>
+              />
             ))}
           </div>
         </div>

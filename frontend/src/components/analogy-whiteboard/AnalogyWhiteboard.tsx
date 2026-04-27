@@ -23,13 +23,8 @@ export default function AnalogyWhiteboard({ entries }: AnalogyWhiteboardProps) {
   if (entries.length === 0) {
     return (
       <div className="whiteboard__empty">
-        <span
-          className="material-symbols-outlined"
-          style={{ fontSize: "3rem" }}
-        >
-          analytics
-        </span>
-        NO ANALOGIES YET
+        <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#777', marginBottom: '16px' }}>Analogies</p>
+        <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'rgba(119,119,119,0.5)', fontStyle: 'italic' }}>Analogy will appear when needed</p>
       </div>
     );
   }
