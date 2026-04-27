@@ -32,6 +32,12 @@ body {
   overflow: hidden; /* Prevent scrolling on root for an app-like feel */
 }
 
+@media (max-width: 1023px) {
+  body {
+    overflow: hidden;
+  }
+}
+
 /* Typography styles */
 .brutalist-h1 {
   font-family: var(--font-primary);
@@ -111,6 +117,13 @@ body {
   z-index: 50;
 }
 
+@media (max-width: 768px) {
+  .top-header {
+    padding: 0 0.75rem;
+    gap: 0.75rem;
+  }
+}
+
 .top-header__brand {
   font-family: var(--font-primary);
   font-size: 1.5rem;
@@ -118,6 +131,12 @@ body {
   text-transform: uppercase;
   letter-spacing: -0.05em;
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .top-header__brand {
+    font-size: 1.125rem;
+  }
 }
 
 .top-header__actions {
@@ -140,7 +159,18 @@ body {
   display: none;
 }
 
-@media (min-width: 1024px) {
+/* ─── Mobile: hide gutters, use slide-up sheet ────── */
+@media (max-width: 767px) {
+  .session-main {
+    flex-direction: column;
+  }
+
+  .session-drawer {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
   .session-drawer {
     display: flex;
     flex-direction: column;
@@ -267,7 +297,13 @@ body {
   transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (min-width: 1024px) {
+@media (max-width: 768px) {
+  .session-center {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
   .session-center {
     padding: 2rem 3rem;
   }
@@ -295,6 +331,20 @@ body {
   gap: 1.25rem;
 }
 
+@media (max-width: 767px) {
+  .feed-status__label {
+    display: none;
+  }
+
+  .feed-status__sensors {
+    gap: 0.9rem;
+  }
+
+  .sensor-indicator {
+    font-size: 0.6875rem;
+  }
+}
+
 .sensor-indicator {
   display: flex;
   align-items: center;
@@ -311,21 +361,30 @@ body {
   color: #000000;
 }
 
+.sensor-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background-color: #bdbdbd;
+  box-shadow: inset 0 0 0 2px var(--color-black);
+}
+
+.sensor-indicator.active .sensor-status-dot {
+  background-color: #17c964; /* green */
+}
+
+@media (max-width: 767px) {
+  .sensor-label {
+    display: none;
+  }
+}
+
+/* (legacy) square indicator kept for any remaining uses */
 .sensor-indicator__square {
   width: 8px;
   height: 8px;
   background-color: #CCCCCC;
   transition: background-color 0.2s ease;
-}
-
-.sensor-indicator.active .sensor-indicator__square {
-  background-color: #FF0000; /* Red recording indicator */
-  animation: blink-recording 1.5s infinite ease-in-out;
-}
-
-@keyframes blink-recording {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
 }
 
 /* ─── Transcript Card ────────────────────────── */
@@ -339,6 +398,21 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 300px;
+}
+
+@media (max-width: 768px) {
+  .transcript-card {
+    padding: 1rem;
+    min-height: 240px;
+  }
+
+  .transcript-card__header {
+    margin-bottom: 1rem;
+  }
+
+  .transcript-card__title {
+    font-size: 1.125rem;
+  }
 }
 
 .transcript-card__accent {
@@ -444,6 +518,12 @@ body {
   padding: 0 2rem;
   background: var(--color-white);
   border-top: var(--border-thick);
+}
+
+@media (max-width: 768px) {
+  .control-bar {
+    padding: 0 0.75rem;
+  }
 }
 
 .control-bar-left {
@@ -566,18 +646,166 @@ body {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .control-tray-brutalist {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "status"
+      "controls";
+    gap: 0.75rem;
     justify-items: center;
   }
 
   .control-bar-utilities {
+    grid-area: controls;
     justify-self: center;
   }
 
   .control-bar-right {
+    grid-area: status;
     justify-self: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .control-bar {
+    height: auto;
+    padding: 0.75rem 0.75rem;
+  }
+
+  .flow-state-meter__label {
+    display: none;
+  }
+
+  .control-bar-utilities {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ─── Mobile Artifacts UI (triggers + slide-up sheet) ───── */
+.mobile-artifact-triggers {
+  display: none;
+}
+
+.artifact-sheet {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-artifact-triggers {
+    --mobile-triggers-height: 56px;
+    height: var(--mobile-triggers-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    background: var(--color-white);
+    border-top: 2px solid var(--color-black);
+    flex-shrink: 0;
+  }
+
+  .artifact-trigger {
+    position: relative;
+    height: 44px;
+    padding: 0 0.9rem;
+    border: 2px solid var(--color-black);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+    cursor: pointer;
+  }
+
+  .artifact-trigger.active {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .artifact-trigger__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: transparent;
+    box-shadow: inset 0 0 0 2px currentColor;
+    opacity: 0.6;
+  }
+
+  .artifact-trigger__dot.on {
+    background: currentColor;
+    opacity: 1;
+  }
+
+  .artifact-sheet {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 64px; /* header height */
+    bottom: calc(80px + var(--mobile-triggers-height, 56px));
+    background: var(--color-white);
+    border: 2px solid var(--color-black);
+    box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+    z-index: 60;
+    flex-direction: column;
+    transition: transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .artifact-sheet.open {
+    display: flex;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .artifact-sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-bottom: 2px solid var(--color-black);
+    flex-shrink: 0;
+  }
+
+  .artifact-sheet__title {
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .artifact-sheet__close {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid var(--color-black);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .artifact-sheet__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.75rem;
   }
 }
 
