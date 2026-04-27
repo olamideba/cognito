@@ -1,0 +1,656 @@
+/* Brutalist.css - Neo-Brutalist "Flow State" Workspace Styles */
+
+/* 
+ * Brutalist variables & Design Tokens 
+ * Palette: Strict Black (#000000) and White (#FFFFFF)
+ */
+:root {
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-gray-100: #f3f4f6;
+  --color-gray-800: #1f2937;
+
+  /* Typography */
+  --font-primary: 'IBM Plex Mono', monospace;
+
+  /* Borders */
+  --border-thick: 8px solid var(--color-black);
+  --border-medium: 4px solid var(--color-black);
+  
+  /* Animations */
+  --transition-speed: 150ms;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base resets for brutalist aesthetic */
+body {
+  font-family: var(--font-primary);
+  background-color: var(--color-white);
+  color: var(--color-black);
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrolling on root for an app-like feel */
+}
+
+/* Typography styles */
+.brutalist-h1 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-size: 3.75rem; /* text-6xl */
+}
+
+@media (min-width: 768px) {
+  .brutalist-h1 {
+    font-size: 6rem; /* text-8xl */
+  }
+}
+
+.brutalist-h2 {
+  font-family: var(--font-primary);
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: normal;
+}
+
+.brutalist-body {
+  font-family: var(--font-primary);
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.brutalist-small {
+  font-family: var(--font-primary);
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.brutalist-logo {
+  font-family: var(--font-primary);
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+/* Container and Layout utility classes */
+.brutalist-container {
+  border: var(--border-thick);
+  background-color: var(--color-white);
+  padding: 1rem;
+}
+
+/* ═══════════════════════════════════════════════ */
+/* ─── MAIN LAYOUT                            ─── */
+/* ═══════════════════════════════════════════════ */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  z-index: 10;
+}
+
+/* ─── Top Header ─────────────────────────────── */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 1.5rem;
+  background: #F9F9F9;
+  border-bottom: 2px solid var(--color-black);
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.top-header__brand {
+  font-family: var(--font-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  flex-shrink: 0;
+}
+
+.top-header__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ─── Session Main (3-Column) ────────────────── */
+/* ─── Session Main (Adaptive State Machine) ─── */
+.session-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Side Drawers ───────────────────────────── */
+.session-drawer {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .session-drawer {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: hidden;
+    padding: 2rem 1rem;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-black);
+    border-radius: 0px;
+    transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease;
+  }
+  
+  /* Inherit generic rule: inner contents flex */
+  .session-drawer > :not(.drawer-handle):not(.drawer-collapse-btn) {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;
+  }
+  
+  /* State A (Default): 10% width each */
+  .state-none .session-drawer {
+    flex: 1;
+    padding: 0;
+    cursor: pointer;
+  }
+  .state-none .session-center {
+    flex: 8;
+  }
+
+  /* State B (Analogy Focus): 50% left, 50% center, 0% right */
+  .state-analogy .session-drawer--left {
+    flex: 5;
+    padding: 2rem;
+  }
+  .state-analogy .session-center {
+    flex: 5;
+  }
+  .state-analogy .session-drawer--right {
+    flex: 0;
+    padding: 0;
+    border: none;
+  }
+
+  /* State C (Quiz Focus): 0% left, 50% center, 50% right */
+  .state-quiz .session-drawer--right {
+    flex: 5;
+    padding: 2rem;
+  }
+  .state-quiz .session-center {
+    flex: 5;
+  }
+  .state-quiz .session-drawer--left {
+    flex: 0;
+    padding: 0;
+    border: none;
+  }
+}
+
+/* ─── Drawer Handle & Collapse Buttons ───────── */
+.drawer-handle {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  font-family: var(--font-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--color-black);
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.session-drawer--right .drawer-handle {
+  transform: none;
+  writing-mode: vertical-rl;
+}
+
+.drawer-handle:hover {
+  opacity: 1;
+  background-color: rgba(0,0,0,0.05);
+}
+
+.drawer-collapse-btn {
+  align-self: flex-start;
+  margin-bottom: 1rem;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-black);
+  background: none;
+  border: 2px solid var(--color-black);
+  /* border: 0px; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.drawer-collapse-btn:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.drawer-collapse-btn--right {
+  align-self: flex-end;
+}
+
+/* ─── Center Workspace ───────────────────────── */
+.session-center {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.5rem;
+  transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 1024px) {
+  .session-center {
+    padding: 2rem 3rem;
+  }
+}
+
+/* ─── Feed Status ────────────────────────────── */
+.feed-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+}
+
+.feed-status__label {
+  font-family: var(--font-primary);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #777;
+  margin-right: 1.5rem;
+}
+
+.feed-status__sensors {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.sensor-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #CCCCCC;
+  transition: color 0.2s ease;
+}
+
+.sensor-indicator.active {
+  color: #000000;
+}
+
+.sensor-indicator__square {
+  width: 8px;
+  height: 8px;
+  background-color: #CCCCCC;
+  transition: background-color 0.2s ease;
+}
+
+.sensor-indicator.active .sensor-indicator__square {
+  background-color: #FF0000; /* Red recording indicator */
+  animation: blink-recording 1.5s infinite ease-in-out;
+}
+
+@keyframes blink-recording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ─── Transcript Card ────────────────────────── */
+.transcript-card {
+  position: relative;
+  border: 2px solid var(--color-black);
+  background: var(--color-white);
+  padding: 2rem;
+  box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+}
+
+.transcript-card__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--color-black);
+}
+
+.transcript-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.transcript-card__tag {
+  display: inline-block;
+  font-family: var(--font-primary);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  background: var(--color-black);
+  color: var(--color-white);
+  padding: 0.25rem 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.transcript-card__title {
+  font-family: var(--font-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin: 0.5rem 0 0;
+}
+
+.transcript-card__body {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.transcript-card__input {
+  display: flex;
+  border-top: 2px solid var(--color-black);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.transcript-card__input textarea {
+  flex: 1;
+  resize: none;
+  height: 60px;
+  font-family: var(--font-primary);
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+}
+
+.transcript-card__input button {
+  background: var(--color-black);
+  color: var(--color-white);
+  border: none;
+  width: 60px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--transition-speed) var(--transition-timing);
+}
+
+.transcript-card__input button:hover {
+  opacity: 0.8;
+}
+
+.transcript-card__input.disconnected textarea {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.transcript-card__input textarea::placeholder {
+  color: rgba(0, 0, 0, 0.55);
+  text-transform: uppercase;
+}
+
+.transcript-card__action.connecting {
+  animation: control-tray-pulse 1s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════ */
+/* ─── CONTROL BAR                            ─── */
+/* ═══════════════════════════════════════════════ */
+
+.control-bar {
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  background: var(--color-white);
+  border-top: var(--border-thick);
+}
+
+.control-bar-left {
+  display: flex;
+  gap: 1rem;
+}
+
+.control-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Button Styles */
+.brutalist-btn {
+  display: inline-block;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  padding: 0.75rem 2rem;
+  font-family: var(--font-primary);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: var(--border-medium);
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color var(--transition-speed) var(--transition-timing),
+              color var(--transition-speed) var(--transition-timing);
+}
+
+.brutalist-btn:hover {
+  background-color: var(--color-white);
+  color: var(--color-black);
+}
+
+.control-tray-btn {
+  padding: 0.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-medium);
+}
+
+.control-tray-btn svg {
+  display: block;
+}
+
+.control-tray-brutalist {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  width: 100%;
+  gap: 1.5rem;
+}
+
+.control-bar-utilities {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-self: start;
+  transition: opacity var(--transition-speed) var(--transition-timing);
+}
+
+.control-bar-utilities.disabled {
+  opacity: 0.35;
+}
+
+.control-bar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+.control-tray-btn--utility:disabled {
+  cursor: default;
+}
+
+.control-tray-btn.connected {
+  background-color: var(--color-white);
+  color: var(--color-black);
+}
+
+.control-tray-btn.connected:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.flow-state-meter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flow-state-meter__label {
+  font-weight: bold;
+}
+
+.flow-state-meter__bars {
+  display: flex;
+  gap: 4px;
+  height: 30px;
+  align-items: flex-end;
+}
+
+@keyframes control-tray-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.18);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 12px rgba(0, 0, 0, 0.08);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .control-tray-brutalist {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .control-bar-utilities {
+    justify-self: center;
+  }
+
+  .control-bar-right {
+    justify-self: center;
+  }
+}
+
+.brutalist-btn-secondary {
+  display: inline-block;
+  background-color: transparent;
+  color: var(--color-black);
+  padding: 0 0.5rem;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.brutalist-btn-secondary:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
+  text-decoration: underline;
+}
+
+.brutalist-icon-btn {
+  background-color: var(--color-white);
+  color: var(--color-black);
+  border: var(--border-medium);
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color var(--transition-speed) var(--transition-timing),
+              color var(--transition-speed) var(--transition-timing);
+}
+
+.brutalist-icon-btn:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.brutalist-icon-btn.active {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+/* Component Overrides for React Select */
+.react-select-brutalist .react-select__control {
+  background-color: var(--color-white);
+  border: var(--border-medium);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.react-select-brutalist .react-select__menu {
+  border: var(--border-medium);
+  border-radius: 0;
+  background-color: var(--color-white);
+  margin-top: 0;
+}
+
+.react-select-brutalist .react-select__option {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+.react-select-brutalist .react-select__option--is-focused {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.react-select-brutalist .react-select__option--is-selected {
+  background-color: var(--color-gray-800);
+  color: var(--color-white);
+}

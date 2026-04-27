@@ -1,0 +1,48 @@
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: var(--font-primary);
+}
+
+.session-header__goal {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.session-header__goal.expanded {
+  white-space: normal;
+}
+
+.session-header__timer {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #777;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.session-header__timer.warning {
+  color: #ff3333;
+  animation: pulse-warning 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.session-header__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
