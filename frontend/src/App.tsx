@@ -22,7 +22,17 @@ import type {
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
 import { useLoggerStore } from "./lib/store-logger";
 import type { Part } from "@google/genai";
-import { ArrowUp, AudioLines, Square, PanelLeftClose, PanelRightClose } from "lucide-react";
+import {
+  ArrowUp,
+  AudioLines,
+  Square,
+  PanelLeftClose,
+  PanelRightClose,
+  Mic,
+  Monitor,
+  Camera,
+  X,
+} from "lucide-react";
 import { useWebcam } from "./hooks/use-webcam";
 import { useScreenCapture } from "./hooks/use-screen-capture";
 const BACKEND_BASE =
@@ -94,6 +104,8 @@ export function AppInner() {
   const [flowScore, setFlowScore] = useState(100);
   const [isConnecting, setIsConnecting] = useState(false);
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'analogy' | 'quiz'>('none');
+  const [hasNewAnalogy, setHasNewAnalogy] = useState(false);
+  const [hasNewQuiz, setHasNewQuiz] = useState(false);
 
   const webcam = useWebcam();
   const screenCapture = useScreenCapture();
@@ -169,14 +181,16 @@ export function AppInner() {
             },
             ...prev,
           ]);
-          setActiveDrawer('analogy');
+          setHasNewAnalogy(true);
+          setActiveDrawer((prev) => (prev === "quiz" ? prev : "analogy"));
           break;
         }
 
         case "quiz_component": {
           const q = envelope.payload as QuizComponentPayload;
           setQuizEntries((prev) => [q, ...prev]);
-          setActiveDrawer('quiz');
+          setHasNewQuiz(true);
+          setActiveDrawer((prev) => (prev === "analogy" ? prev : "quiz"));
           break;
         }
 
@@ -248,6 +262,12 @@ export function AppInner() {
     await disconnect();
   };
 
+  const openDrawer = (drawer: 'analogy' | 'quiz') => {
+    setActiveDrawer(drawer);
+    if (drawer === 'analogy') setHasNewAnalogy(false);
+    if (drawer === 'quiz') setHasNewQuiz(false);
+  };
+
   return (
     <div className="app-layout">
       {/* ─── Top Header ─── */}
@@ -280,7 +300,7 @@ export function AppInner() {
               <AnalogyWhiteboard entries={analogyEntries} />
             </>
           ) : (
-            <div className="drawer-handle" onClick={() => setActiveDrawer('analogy')}>
+            <div className="drawer-handle" onClick={() => openDrawer('analogy')}>
               <span>ANALOGIES</span>
             </div>
           )}
@@ -293,18 +313,21 @@ export function AppInner() {
             <div className="feed-status__sensors">
               {/* VOICE */}
               <div className={cn("sensor-indicator", { active: connected && !muted })}>
-                <span className="sensor-indicator__square"></span>
-                <span>VOICE</span>
+                <span className="sensor-status-dot" aria-hidden="true" />
+                <Mic size={16} aria-hidden="true" />
+                <span className="sensor-label">VOICE</span>
               </div>
               {/* SCREEN */}
               <div className={cn("sensor-indicator", { active: screenCapture.isStreaming })}>
-                <span className="sensor-indicator__square"></span>
-                <span>SCREEN</span>
+                <span className="sensor-status-dot" aria-hidden="true" />
+                <Monitor size={16} aria-hidden="true" />
+                <span className="sensor-label">SCREEN</span>
               </div>
               {/* CAMERA */}
               <div className={cn("sensor-indicator", { active: webcam.isStreaming })}>
-                <span className="sensor-indicator__square"></span>
-                <span>CAMERA</span>
+                <span className="sensor-status-dot" aria-hidden="true" />
+                <Camera size={16} aria-hidden="true" />
+                <span className="sensor-label">CAMERA</span>
               </div>
             </div>
           </div>
@@ -406,12 +429,74 @@ export function AppInner() {
               />
             </>
           ) : (
-            <div className="drawer-handle" onClick={() => setActiveDrawer('quiz')}>
+            <div className="drawer-handle" onClick={() => openDrawer('quiz')}>
               <span>SOCRATIC QUIZ</span>
             </div>
           )}
         </aside>
       </main>
+
+      {/* ─── Mobile Artifact Triggers (visible <768px) ─── */}
+      <div className="mobile-artifact-triggers" role="group" aria-label="Artifacts">
+        <button
+          type="button"
+          className={cn("artifact-trigger", { active: activeDrawer === "analogy" })}
+          onClick={() => openDrawer("analogy")}
+          aria-label="Open Analogies"
+        >
+          <span className={cn("artifact-trigger__dot", { on: hasNewAnalogy })} aria-hidden="true" />
+          ANALOGIES
+        </button>
+        <button
+          type="button"
+          className={cn("artifact-trigger", { active: activeDrawer === "quiz" })}
+          onClick={() => openDrawer("quiz")}
+          aria-label="Open Socratic Check-in"
+        >
+          <span className={cn("artifact-trigger__dot", { on: hasNewQuiz })} aria-hidden="true" />
+          SOCRATIC CHECKIN
+        </button>
+      </div>
+
+      {/* ─── Mobile Slide-Up Sheet (visible <768px) ─── */}
+      <section
+        className={cn("artifact-sheet", { open: activeDrawer !== "none" })}
+        aria-hidden={activeDrawer === "none"}
+      >
+        {activeDrawer !== "none" ? (
+          <>
+            <header className="artifact-sheet__header">
+              <div className="artifact-sheet__title">
+                {activeDrawer === "analogy"
+                  ? "ANALOGIES"
+                  : activeDrawer === "quiz"
+                    ? "SOCRATIC CHECKIN"
+                    : ""}
+              </div>
+              <button
+                type="button"
+                className="artifact-sheet__close"
+                onClick={() => setActiveDrawer("none")}
+                aria-label="Close"
+                title="Close"
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </header>
+            <div className="artifact-sheet__body">
+              {activeDrawer === "analogy" ? (
+                <AnalogyWhiteboard entries={analogyEntries} />
+              ) : (
+                <QuizRenderer
+                  quizzes={quizEntries}
+                  sessionId={sessionId}
+                  onAnswerSubmitted={handleQuizAnswerSubmitted}
+                />
+              )}
+            </div>
+          </>
+        ) : null}
+      </section>
 
       {/* ─── Control Bar ─── */}
       <div className="control-bar">
