@@ -1,17 +1,20 @@
-import os
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from google.cloud import firestore
+from core.config import get_settings, Settings
 
+logger = logging.getLogger(__name__)
+settings: Settings = get_settings()
 _db: Optional[firestore.AsyncClient] = None
 
 def get_db() -> firestore.AsyncClient:
     global _db
     if _db is None:
         _db = firestore.AsyncClient(
-            project=os.getenv("GCP_PROJECT_ID"),
-            database=os.getenv("GCP_DATABASE_ID", "cognito-db")
+            project=settings.GCP_PROJECT_ID,
+            database=settings.GCP_DATABASE_ID
         )
     return _db
 
@@ -65,6 +68,7 @@ async def append_analogy(
         "image_url": image_url, 
         "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
     }
+    # logger.info(f"analogy entry: {entry}")
     await get_db().collection(SESSIONS_COLLECTION).document(session_id).update({
         "analogy_history": firestore.ArrayUnion([entry])
     })

@@ -1,10 +1,12 @@
 from __future__ import annotations
 from typing import Optional
-import os
 import base64
 from pydantic import BaseModel
+from core.config import get_settings, Settings
 
-IMAGE_MODEL = os.getenv("COGNITO_IMAGE_MODEL", "gemini-2.5-flash-image")
+settings: Settings = get_settings()
+
+IMAGE_MODEL = settings.COGNITO_IMAGE_MODEL
 
 FALLBACK_SVG = (
     "data:image/svg+xml;base64,"

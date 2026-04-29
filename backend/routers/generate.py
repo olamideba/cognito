@@ -1,10 +1,10 @@
 import base64
 import logging
-import os
 
 from fastapi import APIRouter
 from google import genai
 from google.genai import types
+from core.config import get_settings, Settings
 
 from schemas.generate import (
     IMAGE_MODEL,
@@ -14,6 +14,7 @@ from schemas.generate import (
     ImageGenerationResult,
 )
 
+settings: Settings = get_settings()
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/generate")
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/api/generate")
 async def generate_image_result(
     concept_label: str, image_prompt: str
 ) -> ImageGenerationResult:
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     full_prompt = (
         f"Create a clear, educational visual diagram or analogy illustration for: {concept_label}. "

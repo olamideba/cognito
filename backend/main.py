@@ -1,8 +1,8 @@
 import asyncio
 import json
-import os
 import base64
 import logging
+from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -15,6 +15,7 @@ from routers import memory as memory_router
 from routers import generate as generate_router
 from routers import live as live_router
 
+from core.config import get_settings, Settings
 from core.session import register, deregister
 from core.db import (
     create_session,
@@ -37,13 +38,19 @@ from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.sessions import InMemorySessionService
 from google.adk.agents.live_request_queue import LiveRequestQueue
 
+
+settings: Settings = get_settings()
 patch_adk_trace_tool_call()
 
-
-
+log_file_handler = RotatingFileHandler(
+    filename="app.log",
+    maxBytes=5*1024*1024, # 5mb
+    backupCount=2
+)
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    level=settings.LOG_LEVEL.upper(),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[log_file_handler, logging.StreamHandler()],
 )
 
 session_service = InMemorySessionService()
@@ -115,7 +122,7 @@ async def websocket_proxy(
     # if browser_token:
     # memory = await get_memory(browser_token)
 
-    # api_key = os.getenv("GEMINI_API_KEY")
+    # api_key = settings.GEMINI_API_KEY
     # if not api_key:
     #     await ws.close(code=1008, reason="GEMINI_API_KEY not configured")
     #     print("[proxy] ERROR: GEMINI_API_KEY not set, closing client")

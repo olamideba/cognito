@@ -11,7 +11,7 @@ TOOL_DECLARATIONS = [
                 },
                 "time_limit_minutes": {
                     "type": "integer",
-                    "description": "Duration of the session in minutes, as stated by the user. Must be between 5 and 120."
+                    "description": "Duration of the session in minutes, as stated by the user. Must be between 5 and 30."
                 }
             },
             "required": ["goal", "time_limit_minutes"]
