@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import "./LandingPage.css";
 import {
-  Play,
   CircleHelp,
   Wrench,
   Target,
@@ -13,19 +12,12 @@ import {
   Activity,
   Github,
   Linkedin,
-  Twitter,
+  Mail,
   ArrowRight
 } from "lucide-react";
+import { FaXTwitter } from "react-icons/fa6";
 
-interface LandingPageProps {
-  /**
-   * Called when the user clicks START SESSION.
-   * Wire this to the existing session-start / WebSocket handshake flow.
-   */
-  onStartSession: () => void;
-}
-
-export default function LandingPage({ onStartSession }: LandingPageProps) {
+export default function LandingPage() {
   useEffect(() => {
     const { documentElement, body } = document;
     const prevHtmlOverflow = documentElement.style.overflow;
@@ -56,7 +48,7 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
 
       {/* ─── 0. Navigation Bar (Sticky Header) ─── */}
       <header className="landing__header">
-        <div className="landing__brand">COGNITO</div>
+        <a href="/" className="landing__brand">COGNITO</a>
         <nav className="landing__nav-links">
           <a href="#how-it-works">How it Works</a>
           <a href="#demo">Demo</a>
@@ -64,21 +56,22 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
           <a href="https://github.com/olamideba/cognito" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
         <div className="landing__header-right">
-          <button className="landing__header-cta" onClick={onStartSession}>
+          <a href="/workspace" className="landing__header-cta">
             TRY IT
-          </button>
+          </a>
         </div>
       </header>
 
       <main className="landing__main">
         {/* ─── 1. Hero Section (The Hook) ─── */}
         <section className="landing__hero">
-          {/* FLOW watermark */}
-          <div className="landing__watermark">
-            <span className="landing__watermark-text">FLOW</span>
-          </div>
+
 
           <div className="landing__content">
+            {/* FLOW watermark */}
+            <div className="landing__watermark">
+              <span className="landing__watermark-text">FLOW</span>
+            </div>
             {/* Structural divider */}
             <div className="landing__divider" />
 
@@ -96,13 +89,13 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
             {/* CTAs */}
             <div className="landing__hero-actions">
               <div className="landing__cta-wrapper">
-                <button
+                <a
                   id="start-session-btn"
                   className="landing__cta"
-                  onClick={onStartSession}
+                  href="/workspace"
                 >
                   TRY IT
-                </button>
+                </a>
                 <div className="landing__cta-outline" />
               </div>
               <a href="#demo" className="landing__cta landing__cta--secondary">
@@ -114,6 +107,16 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
 
         {/* ─── 2 & 3. Problem & Solution ─── */}
         <section className="landing__section" id="problem-solution">
+          <div className="landing__section-header">
+            <div className="landing__section-kicker">Problem / Solution</div>
+            <h2 className="landing__section-title landing__section-title--sentence">
+              Information is cheap. Focus is expensive.
+            </h2>
+            <p className="landing__section-copy">
+              Cognito is built for the moments where minor confusion turns into
+              lost momentum.
+            </p>
+          </div>
           <div className="landing__grid-container landing__grid-2">
             <div className="landing__card">
               <div className="landing__card-icon">
@@ -143,15 +146,35 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
 
         {/* ─── 4. Demo Section ─── */}
         <section className="landing__section" id="demo">
-          <h2 className="landing__section-title">See the system at work.</h2>
+          <div className="landing__section-header">
+            <div className="landing__section-kicker">Demo</div>
+            <h2 className="landing__section-title landing__section-title--sentence">
+              See the system at work.
+            </h2>
+          </div>
           <div className="landing__demo-placeholder">
-            <Play size={48} strokeWidth={1} color="#000" />
+            <iframe
+              src="https://www.loom.com/embed/3cf7f8e72b494589a3e872a08f19e154"
+              allowFullScreen
+              style={{ width: "100%", height: "100%", border: "none" }}
+              title="Cognito Demo"
+            />
           </div>
         </section>
 
         {/* ─── 5. How It Works: The Flow Cycle ─── */}
         <section className="landing__section" id="how-it-works">
-          <h2 className="landing__section-title">THE FLOW CYCLE</h2>
+          <div className="landing__watermark">
+            <span className="landing__watermark-text">FLOW</span>
+          </div>
+          <div className="landing__section-header">
+            <div className="landing__section-kicker">How It Works</div>
+            <h2 className="landing__section-title">THE FLOW CYCLE</h2>
+            <p className="landing__section-copy">
+              A structured sequence designed to preserve momentum and intervene
+              only when needed.
+            </p>
+          </div>
           <div className="landing__grid-container landing__grid-4">
             {/* Step 1 */}
             <div className="landing__card landing__flow-step">
@@ -208,7 +231,14 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
 
         {/* ─── 6. Technical Breakdown ─── */}
         <section className="landing__section" id="specs">
-          <h2 className="landing__section-title">TECHNICAL BREAKDOWN</h2>
+          <div className="landing__section-header">
+            <div className="landing__section-kicker">Specs</div>
+            <h2 className="landing__section-title">TECHNICAL BREAKDOWN</h2>
+            <p className="landing__section-copy">
+              Low-latency voice, live vision context, and adaptive artifacts
+              working together in one learning loop.
+            </p>
+          </div>
           <div className="landing__grid-container landing__grid-3">
             <div className="landing__card">
               <div className="landing__card-icon">
@@ -247,20 +277,90 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
 
         {/* ─── 7. Contact ─── */}
         <section className="landing__section" id="contact">
-          <div className="landing__card landing__contact-card">
-            <h3 className="landing__card-title">Olamide Balogun</h3>
-            <p className="landing__card-body">
-              AI Engineer building practical, intelligent systems.
-            </p>
-            <div className="landing__social-links">
-              <a href="https://github.com/olamideba" target="_blank" rel="noreferrer">
-                <Github size={18} /> @olamideba
+          <div className="landing__watermark">
+            <span className="landing__watermark-text">FLOW</span>
+          </div>
+          <div className="landing__contact-shell">
+            <div className="landing__section-header landing__contact-header">
+              <div className="landing__section-kicker landing__contact-kicker">Contact</div>
+              <h2 className="landing__section-title landing__section-title--sentence landing__contact-title">Say hi to Olamide.</h2>
+              <p className="landing__section-copy landing__contact-copy">
+                AI engineer building practical, intelligent systems. Open to
+                feedback, bug reports, and collaboration.
+              </p>
+            </div>
+
+            <div className="landing__contact-grid">
+              <a
+                className="landing__contact-link"
+                href="mailto:olamideba174@gmail.com"
+              >
+                <span className="landing__contact-link-icon" aria-hidden="true">
+                  <Mail size={22} />
+                </span>
+                <span className="landing__contact-link-copy">
+                  <span className="landing__contact-link-label">Email</span>
+                  <span className="landing__contact-link-value">
+                    olamideba174@gmail.com
+                  </span>
+                </span>
+                <span className="landing__contact-link-arrow" aria-hidden="true">
+                  <ArrowRight size={20} />
+                </span>
               </a>
-              <a href="#" target="_blank" rel="noreferrer">
-                <Linkedin size={18} /> LinkedIn
+
+              <a
+                className="landing__contact-link"
+                href="https://www.linkedin.com/olamideba"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="landing__contact-link-icon" aria-hidden="true">
+                  <Linkedin size={22} />
+                </span>
+                <span className="landing__contact-link-copy">
+                  <span className="landing__contact-link-label">LinkedIn</span>
+                  <span className="landing__contact-link-value">@olamideba</span>
+                </span>
+                <span className="landing__contact-link-arrow" aria-hidden="true">
+                  <ArrowRight size={20} />
+                </span>
               </a>
-              <a href="#" target="_blank" rel="noreferrer">
-                <Twitter size={18} /> Twitter
+
+              <a
+                className="landing__contact-link"
+                href="https://github.com/olamideba"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="landing__contact-link-icon" aria-hidden="true">
+                  <Github size={22} />
+                </span>
+                <span className="landing__contact-link-copy">
+                  <span className="landing__contact-link-label">GitHub</span>
+                  <span className="landing__contact-link-value">@olamideba</span>
+                </span>
+                <span className="landing__contact-link-arrow" aria-hidden="true">
+                  <ArrowRight size={20} />
+                </span>
+              </a>
+
+              <a
+                className="landing__contact-link"
+                href="https://x.com/nenja_mj"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="landing__contact-link-icon" aria-hidden="true">
+                  <FaXTwitter size={20} />
+                </span>
+                <span className="landing__contact-link-copy">
+                  <span className="landing__contact-link-label">X</span>
+                  <span className="landing__contact-link-value">@nenja_mj</span>
+                </span>
+                <span className="landing__contact-link-arrow" aria-hidden="true">
+                  <ArrowRight size={20} />
+                </span>
               </a>
             </div>
           </div>
@@ -273,9 +373,9 @@ export default function LandingPage({ onStartSession }: LandingPageProps) {
           </h2>
           <div className="landing__hero-actions" style={{ marginBottom: "0" }}>
             <div className="landing__cta-wrapper">
-              <button className="landing__cta" onClick={onStartSession}>
+              <a className="landing__cta" href="/workspace">
                 TRY IT
-              </button>
+              </a>
               <div className="landing__cta-outline" />
             </div>
             <a
