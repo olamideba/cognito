@@ -32,7 +32,7 @@ class AnalogyResponse(BaseModel):
 
 
 class ImageGenerationResult(BaseModel):
-    image_url: str
+    base64_string: str
     status: str
     message: str
     model: str

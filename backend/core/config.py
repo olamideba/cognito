@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     GCP_PROJECT_ID: str = Field(..., description="Google Cloud Project ID")
     GCP_DATABASE_ID: str = Field(..., description="Google Cloud Firestore Database ID")
+    GCP_IMAGE_BUCKET: str = Field(..., description="Google Cloud Storage Bucket for generated images")
 
     DEFAULT_VOICE_NAME: str = Field(default="Puck")
 

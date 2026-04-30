@@ -128,13 +128,13 @@ async def generate_analogy_visual(
     generation = await generate_image_result(concept_label, image_prompt)
     timestamp = datetime.now(timezone.utc).isoformat()
 
-    await append_analogy(session_id, concept_label, generation.image_url, timestamp)
+    image_url: str = await append_analogy(session_id, concept_label, generation.base64_string, timestamp)
 
     result = {
         "session_id": session_id,
         "status": generation.status,
         "concept_label": concept_label,
-        "image_url": generation.image_url,
+        "image_url": image_url,
         "timestamp": timestamp,
         "message": generation.message,
         "model": generation.model,
