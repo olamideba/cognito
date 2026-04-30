@@ -1,3 +1,4 @@
+/* ── Whiteboard list ─────────────────────────────────────────────────────── */
 .whiteboard {
   width: 100%;
   height: 100%;
@@ -47,9 +48,190 @@
   opacity: 0.6;
 }
 
+/* ── Image wrapper — 16:9 container ─────────────────────────────────────── */
+.whiteboard__image-wrap {
+  position: relative;
+  width: 100%;
+  /* 16:9 ratio — image fills the full width, height scales proportionally  */
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: #000;
+}
+
 .whiteboard__card-image {
   width: 100%;
-  object-fit: contain;
-  max-height: 300px;
+  height: 100%;
+  object-fit: contain;   /* show the full image; backbone is 16:9 so no crop */
   display: block;
+  transition: opacity 0.2s ease;
+}
+
+.whiteboard__image-wrap:hover .whiteboard__card-image {
+  opacity: 0.92;
+}
+
+/* ── Expand button ──────────────────────────────────────────────────────── */
+.whiteboard__expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.18s ease, background 0.18s ease;
+  padding: 0;
+  line-height: 0;
+}
+
+.whiteboard__image-wrap:hover .whiteboard__expand-btn {
+  opacity: 1;
+}
+
+.whiteboard__expand-btn:hover {
+  background: rgba(0, 0, 0, 0.82) !important;
+}
+
+/* ── Lightbox overlay ───────────────────────────────────────────────────── */
+.lb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: lb-fadein 0.18s ease;
+}
+
+@keyframes lb-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* toolbar */
+.lb-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-primary, monospace);
+  z-index: 1;
+}
+
+.lb-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.lb-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lb-btn {
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-primary, monospace);
+  transition: background 0.15s, color 0.15s;
+}
+
+.lb-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.lb-btn--icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* hint bar */
+.lb-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-primary, monospace);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* zoom indicator */
+.lb-zoom-indicator {
+  position: absolute;
+  bottom: 14px;
+  right: 16px;
+  font-family: var(--font-primary, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+/* stage — the pannable/zoomable viewport */
+.lb-stage {
+  flex: 1;
+  width: 100%;
+  margin-top: 48px;  /* toolbar height */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;  /* required for pointer events on touch */
+}
+
+.lb-image {
+  /* Start at a comfortable size — fill width up to 90vw, 16:9 height */
+  max-width: 90vw;
+  max-height: calc(90vh - 48px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transform-origin: center center;
+  user-select: none;
+  will-change: transform;
+  transition: none;  /* pan/zoom must be instant */
 }
