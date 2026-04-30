@@ -1,22 +1,33 @@
-import os
 import uuid
+import logging
+import base64
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from google.cloud import firestore
+from google.cloud import firestore, storage
+from google.cloud.storage import Bucket, Blob
+from core.config import get_settings, Settings
 
+logger = logging.getLogger(__name__)
+settings: Settings = get_settings()
 _db: Optional[firestore.AsyncClient] = None
+_storage: Optional[storage.Client] = None
 
 def get_db() -> firestore.AsyncClient:
     global _db
     if _db is None:
         _db = firestore.AsyncClient(
-            project=os.getenv("GCP_PROJECT_ID"),
-            database=os.getenv("GCP_DATABASE_ID", "cognito-db")
+            project=settings.GCP_PROJECT_ID,
+            database=settings.GCP_DATABASE_ID
         )
     return _db
 
 SESSIONS_COLLECTION = "cognito_sessions"
 MEMORIES_COLLECTION = "cognito_memories"
+
+def get_storage_bucket(bucket_name) -> Bucket:
+    _storage = storage.Client(project=settings.GCP_PROJECT_ID)
+    bucket: Bucket = _storage.bucket(bucket_name)
+    return bucket
 
 async def create_session() -> str:
     session_id = str(uuid.uuid4())
@@ -54,12 +65,27 @@ async def append_distraction_event(session_id: str, event: Dict[str, Any]) -> No
         "distraction_events": firestore.ArrayUnion([event])
     })
 
+async def upload_to_gcs(image_bytes, destination_blob_name) -> str:
+    try:
+        bucket: Bucket = get_storage_bucket(bucket_name=settings.GCP_IMAGE_BUCKET)
+        blob: Blob = bucket.blob(destination_blob_name)
+        blob.upload_from_string(data=image_bytes, content_type="image/png")
+        logger.info(f"Image uploaded to gs://{settings.GCP_IMAGE_BUCKET}/{destination_blob_name}")
+        return blob.public_url
+    except Exception as e:
+        logger.error(f"Failed to upload image to bucket: {e}")
+    
+
 async def append_analogy(
     session_id: str,
     concept: str,
-    image_url: str,
+    base64_string: str,
     timestamp: Optional[str] = None,
 ) -> None:
+
+    image_bytes: bytes = base64.b64decode(base64_string)
+    image_url: str = await upload_to_gcs(image_bytes=image_bytes, destination_blob_name=f"analogies/{session_id}/{concept}.png")
+    
     entry = {
         "concept": concept, 
         "image_url": image_url, 
@@ -68,6 +94,7 @@ async def append_analogy(
     await get_db().collection(SESSIONS_COLLECTION).document(session_id).update({
         "analogy_history": firestore.ArrayUnion([entry])
     })
+    return image_url
 
 async def resume_session(prior_session_id: str) -> str:
     prior_session = await get_session(prior_session_id)

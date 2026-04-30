@@ -28,7 +28,7 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_generate_analogy_visual_emits_timestamp_and_persists(self) -> None:
         mock_image = AsyncMock(
             return_value=ImageGenerationResult(
-                image_url="data:image/png;base64,abc",
+                base64_string="base64,abc",
                 status="generated",
                 message="Analogy image generated successfully.",
                 model="gemini-2.5-flash-image",
@@ -69,7 +69,7 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_generate_analogy_visual_marks_fallback_as_failed(self) -> None:
         mock_image = AsyncMock(
             return_value=ImageGenerationResult(
-                image_url="data:image/svg+xml;base64,fallback",
+                base64_string="base64,fallback",
                 status="failed",
                 message="Image generation failed; fallback visual provided.",
                 model="gemini-2.5-flash-image",

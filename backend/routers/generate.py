@@ -1,10 +1,10 @@
 import base64
 import logging
-import os
 
 from fastapi import APIRouter
 from google import genai
 from google.genai import types
+from core.config import get_settings, Settings
 
 from schemas.generate import (
     IMAGE_MODEL,
@@ -14,6 +14,7 @@ from schemas.generate import (
     ImageGenerationResult,
 )
 
+settings: Settings = get_settings()
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/generate")
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/api/generate")
 async def generate_image_result(
     concept_label: str, image_prompt: str
 ) -> ImageGenerationResult:
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     full_prompt = (
         f"Create a clear, educational visual diagram or analogy illustration for: {concept_label}. "
@@ -36,6 +37,9 @@ async def generate_image_result(
             contents=[full_prompt],
             config=types.GenerateContentConfig(
                 response_modalities=["Image"],
+                image_config=types.ImageConfig(
+                    aspect_ratio="16:9", image_size="2K"
+                ),
             ),
         )
 
@@ -43,10 +47,9 @@ async def generate_image_result(
         if candidates and candidates[0].content and candidates[0].content.parts:
             for part in candidates[0].content.parts:
                 if part.inline_data is not None:
-                    mime_type = part.inline_data.mime_type or "image/png"
                     b64_data = base64.b64encode(part.inline_data.data).decode("utf-8")
                     return ImageGenerationResult(
-                        image_url=f"data:{mime_type};base64,{b64_data}",
+                        base64_string=b64_data,
                         status="generated",
                         message="Analogy image generated successfully.",
                         model=IMAGE_MODEL,
@@ -54,7 +57,7 @@ async def generate_image_result(
 
         logger.warning("No image part found in Gemini response for '%s'", concept_label)
         return ImageGenerationResult(
-            image_url=FALLBACK_SVG,
+            base64_string=FALLBACK_SVG,
             status="failed",
             message="Image generation did not return an image; fallback visual provided.",
             model=IMAGE_MODEL,
@@ -65,7 +68,7 @@ async def generate_image_result(
     except Exception as exc:
         logger.exception("Image generation failed for '%s'", concept_label)
         return ImageGenerationResult(
-            image_url=FALLBACK_SVG,
+            base64_string=FALLBACK_SVG,
             status="failed",
             message="Image generation failed; fallback visual provided.",
             model=IMAGE_MODEL,
