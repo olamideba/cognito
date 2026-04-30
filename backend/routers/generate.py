@@ -37,6 +37,9 @@ async def generate_image_result(
             contents=[full_prompt],
             config=types.GenerateContentConfig(
                 response_modalities=["Image"],
+                image_config=types.ImageConfig(
+                    aspect_ratio="16:9", image_size="2K"
+                ),
             ),
         )
 

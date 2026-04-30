@@ -182,7 +182,7 @@ export function AppInner() {
             ...prev,
           ]);
           setHasNewAnalogy(true);
-          setActiveDrawer((prev) => (prev === "quiz" ? prev : "analogy"));
+          setActiveDrawer("analogy");
           break;
         }
 
@@ -190,7 +190,7 @@ export function AppInner() {
           const q = envelope.payload as QuizComponentPayload;
           setQuizEntries((prev) => [q, ...prev]);
           setHasNewQuiz(true);
-          setActiveDrawer((prev) => (prev === "analogy" ? prev : "quiz"));
+          setActiveDrawer("quiz");
           break;
         }
 
