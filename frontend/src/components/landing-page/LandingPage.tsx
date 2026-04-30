@@ -48,7 +48,14 @@ export default function LandingPage() {
 
       {/* ─── 0. Navigation Bar (Sticky Header) ─── */}
       <header className="landing__header">
-        <a href="/" className="landing__brand">COGNITO</a>
+        <a href="/" className="landing__brand">
+          <img
+            className="landing__brand-logo"
+            src="/logo.png"
+            alt="Cognito logo"
+          />
+          <span className="landing__brand-text">COGNITO</span>
+        </a>
         <nav className="landing__nav-links">
           <a href="#how-it-works">How it Works</a>
           <a href="#demo">Demo</a>

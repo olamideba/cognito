@@ -54,6 +54,9 @@
 }
 
 .landing__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
   font-family: 'Space Grotesk', var(--font-primary);
   font-size: 1.5rem;
   font-weight: 700;
@@ -62,6 +65,18 @@
   color: var(--color-black);
   text-decoration: none;
   flex: 1;
+}
+
+.landing__brand-logo {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.landing__brand-text {
+  line-height: 1;
 }
 
 .landing__nav-links {
@@ -336,29 +351,6 @@
   z-index: 1;
 }
 
-@media (max-width: 640px) {
-  .landing__hero-actions {
-    flex-direction: column;
-    width: 100%;
-    gap: 0.75rem;
-  }
-
-  .landing__cta {
-    font-size: 0.875rem;
-    padding: 0.875rem 2rem;
-    width: 100%;
-    text-align: center;
-  }
-
-  .landing__cta-wrapper {
-    width: 100%;
-  }
-
-  .landing__sub-headline {
-    font-size: 1rem;
-  }
-}
-
 /* ─── Multi-column Grids & Cards ─── */
 .landing__grid-container {
   display: grid;
@@ -475,6 +467,15 @@
 
 .landing__contact-header {
   margin-bottom: 0.5rem;
+}
+
+.landing__contact-kicker {
+}
+
+.landing__contact-title {
+}
+
+.landing__contact-copy {
 }
 
 .landing__contact-grid {
