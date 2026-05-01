@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useCallback } from "react";
 import "./Brutalist.css";
 import { LiveAPIProvider } from "./contexts/LiveAPIContext";
 import Logger from "./components/logger/Logger";
@@ -272,7 +272,9 @@ export function AppInner() {
     <div className="app-layout">
       {/* ─── Top Header ─── */}
       <header className="top-header">
-        <div className="top-header__brand">COGNITO</div>
+        <div className="top-header__brand">
+          <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>COGNITO</a>
+        </div>
         <SessionHeader
           status={sessionStatus}
           goal={sessionGoal}
@@ -516,12 +518,27 @@ export function AppInner() {
   );
 }
 
+/* ─── Lightweight path router (no extra dependency) ─── */
+function subscribeToLocation(cb: () => void) {
+  window.addEventListener("popstate", cb);
+  return () => window.removeEventListener("popstate", cb);
+}
+
+function getLocationPath() {
+  return window.location.pathname;
+}
+
+function useLocationPath() {
+  return useSyncExternalStore(subscribeToLocation, getLocationPath);
+}
+
 function App() {
+  const pathname = useLocationPath();
   const [backendState, setBackendState] = useState<BackendState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
-  const [showLanding, setShowLanding] = useState(true);
 
-  useEffect(() => {
+  const checkBackend = useCallback(() => {
+    setBackendState("loading");
     fetchLiveConfig()
       .then(() => setBackendState("ready"))
       .catch((err) => {
@@ -530,6 +547,20 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    checkBackend();
+  }, [checkBackend]);
+
+  /* ── Landing page (no backend dependency) ── */
+  if (pathname === "/" || (!pathname.startsWith("/workspace"))) {
+    return (
+      <div className="App">
+        <LandingPage />
+      </div>
+    );
+  }
+
+  /* ── Workspace: needs backend ── */
   if (backendState === "loading") {
     return (
       <div
@@ -595,32 +626,11 @@ function App() {
           <button
             className="brutalist-btn"
             style={{ marginTop: "1.5rem" }}
-            onClick={() => {
-              setBackendState("loading");
-              fetchLiveConfig()
-                .then(() => setBackendState("ready"))
-                .catch((e) => {
-                  setErrorMessage(e?.message ?? "Error");
-                  setBackendState("error");
-                });
-            }}
+            onClick={checkBackend}
           >
             RETRY
           </button>
         </div>
-      </div>
-    );
-  }
-
-  /* ── INTEGRATION POINT ──
-   * When showLanding is true, render the landing/onboarding page.
-   * Clicking START SESSION sets showLanding to false, which mounts
-   * the LiveAPIProvider and starts the WebSocket handshake.
-   */
-  if (showLanding) {
-    return (
-      <div className="App">
-        <LandingPage onStartSession={() => setShowLanding(false)} />
       </div>
     );
   }
