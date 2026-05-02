@@ -9,7 +9,7 @@ from routers.generate import (
     generate_analogy,
 )
 from routers.session import QuizAnswerRequest, post_quiz_answer
-from tools import handlers
+from domains.agents import handlers
 
 
 class _FakeWebSocket:
@@ -35,11 +35,11 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
                 used_fallback=False,
             )
         )
-        mock_append = AsyncMock()
+        mock_append = AsyncMock(return_value="data:image/png;base64,abc")
 
         with (
-            patch("routers.generate.generate_image_result", mock_image),
-            patch("tools.handlers.append_analogy", mock_append),
+            patch("domains.analogy.module.generate_image_result", mock_image),
+            patch("domains.analogy.module.append_analogy", mock_append),
         ):
             result = await handlers.generate_analogy_visual(
                 concept_label="Recursion Stack",
@@ -57,7 +57,7 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
         mock_append.assert_awaited_once_with(
             "session-123",
             "Recursion Stack",
-            "data:image/png;base64,abc",
+            "base64,abc",
             result["timestamp"],
         )
 
@@ -77,11 +77,11 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
                 error="model not available",
             )
         )
-        mock_append = AsyncMock()
+        mock_append = AsyncMock(return_value="data:image/png;base64,fallback")
 
         with (
-            patch("routers.generate.generate_image_result", mock_image),
-            patch("tools.handlers.append_analogy", mock_append),
+            patch("domains.analogy.module.generate_image_result", mock_image),
+            patch("domains.analogy.module.append_analogy", mock_append),
         ):
             result = await handlers.generate_analogy_visual(
                 concept_label="Queue",
@@ -99,9 +99,12 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
         fixed_component_id = UUID("12345678-1234-5678-1234-567812345678")
 
         with (
-            patch("tools.handlers.get_session", mock_get_session),
-            patch("tools.handlers.update_session", mock_update),
-            patch("tools.handlers.uuid.uuid4", return_value=fixed_component_id),
+            patch("domains.mentor.module.get_session", mock_get_session),
+            patch("domains.mentor.module.update_session", mock_update),
+            patch(
+                "domains.mentor.module.uuid.uuid4",
+                return_value=fixed_component_id,
+            ),
         ):
             result = await handlers.render_quiz_component(
                 component_type="multiple_choice",

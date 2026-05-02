@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from core.db import get_session
-from tools.handlers import submit_quiz_answer
+from domains.agents.handlers import submit_quiz_answer
+from domains.live_session.context import set_session_id
+from domains.mentor.repository import get_session
 
 router = APIRouter(prefix="/api/session")
 
@@ -18,8 +19,7 @@ async def read_session(session_id: str):
 
 @router.post("/{session_id}/quiz_answer")
 async def post_quiz_answer(session_id: str, req: QuizAnswerRequest):
-    from tools.handlers import _CURRENT_SESSION_ID
-    _CURRENT_SESSION_ID.set(session_id)
+    set_session_id(session_id)
     result = await submit_quiz_answer(
         component_id=req.component_id,
         answer=req.answer,
@@ -32,4 +32,3 @@ async def post_quiz_answer(session_id: str, req: QuizAnswerRequest):
         "feedback": "Correct!" if result.get("is_correct") else "Incorrect",
         "component_id": req.component_id,
     }
-

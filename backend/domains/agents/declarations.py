@@ -61,7 +61,7 @@ TOOL_DECLARATIONS = [
                 },
                 "options": {
                     "type": "array",
-                    "items": { "type": "string" },
+                    "items": {"type": "string"},
                     "description": "List of answer options. Required for multiple_choice. Ignored for fill_in_blank and reflection_prompt."
                 },
                 "correct_answer": {
@@ -119,4 +119,3 @@ TOOL_DECLARATIONS = [
     }
 ]
 
-TOOL_NAMES = {t["name"] for t in TOOL_DECLARATIONS}

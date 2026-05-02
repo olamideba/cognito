@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from core.db import get_memory
+from domains.memory.repository import get_memory
 
 router = APIRouter(prefix="/api/memory")
 
