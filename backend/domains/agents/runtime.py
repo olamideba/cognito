@@ -4,6 +4,7 @@ from google.adk.agents import Agent
 from google.adk.tools.agent_tool import AgentTool
 
 from core.config import Settings, get_settings
+from core.live_defaults import get_system_instruction
 from domains.agents.handlers import (
     confirm_session_goal,
     generate_analogy_visual,
@@ -33,5 +34,5 @@ agent = Agent(
     name="cognito_agent",
     model=settings.COGNITO_MODEL,
     tools=build_agent_tools(),
-    instruction=(Path(__file__).resolve().parent / "prompts" / "system.md").read_text(),
+    instruction=get_system_instruction(),
 )

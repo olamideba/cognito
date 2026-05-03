@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 from google.genai import types
 from core.config import get_settings, Settings
 
@@ -35,4 +36,6 @@ def get_default_response_modalities() -> list[types.Modality]:
 
 
 def get_system_instruction() -> str:
-    return SYSTEM_PROMPT_PATH.read_text()
+    prompt_template = SYSTEM_PROMPT_PATH.read_text()
+    current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+    return prompt_template.format(current_datetime=current_datetime)
