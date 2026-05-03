@@ -5,8 +5,10 @@ from typing import Any, Dict, Optional
 from domains.live_session.envelope import make_envelope
 from domains.mentor.repository import (
     append_distraction_event,
+    append_quiz,
     create_session,
     get_session,
+    record_quiz_answer,
     resume_session,
     update_session,
 )
@@ -114,7 +116,7 @@ async def render_quiz_component(
         state["last_component_id"] = comp_id
         await update_session(session_id, {"state": state})
 
-    return {
+    result = {
         "status": "rendered",
         "component_type": component_type,
         "component_id": comp_id,
@@ -122,6 +124,9 @@ async def render_quiz_component(
         "options": options,
         "hint": hint,
     }
+
+    await append_quiz(session_id, result)
+    return result
 
 
 async def submit_quiz_answer(
@@ -138,6 +143,8 @@ async def submit_quiz_answer(
     is_correct = False
     if correct_answer is not None:
         is_correct = answer.strip().lower() == str(correct_answer).strip().lower()
+
+    await record_quiz_answer(session_id, component_id, answer, is_correct)
 
     return {
         "component_id": component_id,

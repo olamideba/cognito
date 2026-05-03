@@ -72,8 +72,42 @@ async def resume_session(prior_session_id: str) -> str:
             session_id,
             goal=prior_session.get("goal"),
             analogy_history=prior_session.get("analogy_history", []),
+            quiz_history=prior_session.get("quiz_history", []),
             prior_session_id=prior_session_id,
         )
     )
     return session_id
 
+
+async def append_quiz(session_id: str, quiz_data: Dict[str, Any]) -> None:
+    entry = {
+        **quiz_data,
+        "user_answer": None,
+        "is_correct": None,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await session_document_ref(session_id).update(
+        {
+            "quiz_history": firestore.ArrayUnion([entry]),
+        }
+    )
+
+
+async def record_quiz_answer(
+    session_id: str, component_id: str, answer: str, is_correct: bool
+) -> None:
+    session = await get_session(session_id)
+    if not session:
+        return
+
+    history = session.get("quiz_history", [])
+    updated = False
+    for quiz in history:
+        if quiz.get("component_id") == component_id:
+            quiz["user_answer"] = answer
+            quiz["is_correct"] = is_correct
+            updated = True
+            break
+
+    if updated:
+        await update_session(session_id, {"quiz_history": history})

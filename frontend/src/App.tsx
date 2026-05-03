@@ -28,6 +28,7 @@ import {
   Square,
   PanelLeftClose,
   PanelRightClose,
+  RotateCcw,
   Mic,
   Monitor,
   Camera,
@@ -106,6 +107,8 @@ export function AppInner() {
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'analogy' | 'quiz'>('none');
   const [hasNewAnalogy, setHasNewAnalogy] = useState(false);
   const [hasNewQuiz, setHasNewQuiz] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const webcam = useWebcam();
   const screenCapture = useScreenCapture();
@@ -122,6 +125,38 @@ export function AppInner() {
       setIsConnecting(false);
     }
   }, [connected]);
+
+  // REST Hydration on Mount
+  useEffect(() => {
+    const storedId = getStoredSessionId();
+    if (storedId) {
+      fetch(`${BACKEND_BASE}/api/session/${storedId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data) {
+            setSessionId(data.session_id);
+            setSessionGoal(data.goal);
+            setSessionTotalSeconds(data.time_limit_seconds);
+            setSessionStartTime(data.start_time);
+            setFlowScore(data.flow_score || 100);
+            if (data.status === "active") setSessionStatus("active");
+
+            if (data.analogy_history) {
+              const hydratedAnalogies = data.analogy_history.map((item: any) => ({
+                concept_label: item.concept || item.concept_label,
+                image_url: item.image_url,
+                timestamp: item.timestamp,
+              }));
+              setAnalogyEntries(hydratedAnalogies);
+            }
+            if (data.quiz_history) {
+              setQuizEntries(data.quiz_history);
+            }
+          }
+        })
+        .catch((err) => console.error("REST Hydration failed:", err));
+    }
+  }, []);
 
   const handleQuizAnswerSubmitted = (
     quiz: QuizComponentPayload,
@@ -200,6 +235,17 @@ export function AppInner() {
           break;
         }
 
+        case "workspace_hydrated": {
+          const h = envelope.payload;
+          if (h.analogy_history) {
+            setAnalogyEntries(h.analogy_history);
+          }
+          if (h.quiz_history) {
+            setQuizEntries(h.quiz_history);
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -268,6 +314,67 @@ export function AppInner() {
     if (drawer === 'quiz') setHasNewQuiz(false);
   };
 
+  const handleResetWorkspace = async () => {
+    // 1. Disconnect current session
+    if (connected) {
+      await disconnect();
+    }
+
+    // 2. Clear local UI states instantly
+    const { clearLogs } = useLoggerStore.getState();
+    clearLogs();
+    setAnalogyEntries([]);
+    setQuizEntries([]);
+    setSessionStatus("idle");
+    setSessionGoal(null);
+    setSessionStartTime(null);
+    setSessionTotalSeconds(null);
+    setFlowScore(100);
+    setActiveDrawer("none");
+    setSessionId(null);
+
+    // 3. Clear session ID from storage
+    localStorage.removeItem(SESSION_ID_KEY);
+
+    // 4. Close modal
+    setShowResetModal(false);
+  };
+
+  // Accessibility: Esc key and focus trap for modal
+  useEffect(() => {
+    if (!showResetModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowResetModal(false);
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    // Initial focus
+    const firstBtn = modalRef.current?.querySelector("button");
+    firstBtn?.focus();
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showResetModal]);
+
   return (
     <div className="app-layout">
       {/* ─── Top Header ─── */}
@@ -282,9 +389,43 @@ export function AppInner() {
           startTime={sessionStartTime}
         />
         <div className="top-header__actions">
+          <button 
+            className="reset-session-btn" 
+            onClick={() => setShowResetModal(true)}
+            title="Reset Workspace"
+            aria-label="Reset Workspace"
+          >
+            <RotateCcw size={20} />
+          </button>
           <SettingsDialog />
         </div>
       </header>
+
+      {/* ─── Reset Confirmation Modal ─── */}
+      {showResetModal && (
+        <div className="brutalist-modal-overlay">
+          <div 
+            className="brutalist-modal" 
+            ref={modalRef}
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="modal-title"
+          >
+            <h2 id="modal-title" className="brutalist-h2">RESET WORKSPACE?</h2>
+            <p className="brutalist-body" style={{ fontSize: '1rem', margin: '1.5rem 0', textTransform: 'none' }}>
+              This will clear your current transcript, analogies, and quizzes. Your session timer will be refreshed. This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button className="brutalist-btn-outline" onClick={() => setShowResetModal(false)}>
+                KEEP WORKING
+              </button>
+              <button className="brutalist-btn-destructive" onClick={handleResetWorkspace}>
+                CLEAR EVERYTHING
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Main 3-Column Area ─── */}
       <main className={`session-main state-${activeDrawer}`}>

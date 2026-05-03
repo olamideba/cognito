@@ -196,6 +196,9 @@ async def _forward_runner_events(
         set_live_context(state.session_id, ws)
         await ws.send_json({"setupComplete": {}})
 
+        if state.session_snapshot:
+            await _hydrate_client_workspace(ws, state.session_snapshot)
+
         if state.is_reconnect and state.session_snapshot:
             content = build_reconnect_message(state.session_snapshot)
             if content is not None:
@@ -209,6 +212,36 @@ async def _forward_runner_events(
         ):
             event_json_str = serialize_event(event)
             if event_json_str:
-                await ws.send_text(event_json_str)
+                try:
+                    await ws.send_text(event_json_str)
+                except Exception:
+                    # Connection likely closed by client already
+                    break
     except Exception:
         logger.exception("Error while forwarding runner events")
+
+
+async def _hydrate_client_workspace(ws: WebSocket, session_snapshot: dict) -> None:
+    analogy_history = session_snapshot.get("analogy_history", [])
+    # Align Firestore 'concept' with frontend 'concept_label'
+    hydrated_analogies = []
+    for item in analogy_history:
+        hydrated_analogies.append({
+            "concept_label": item.get("concept", item.get("concept_label")),
+            "image_url": item.get("image_url"),
+            "timestamp": item.get("timestamp")
+        })
+
+    quiz_history = session_snapshot.get("quiz_history", [])
+
+    if hydrated_analogies or quiz_history:
+        try:
+            await ws.send_json({
+                "type": "workspace_hydrated",
+                "payload": {
+                    "analogy_history": hydrated_analogies,
+                    "quiz_history": quiz_history,
+                }
+            })
+        except Exception:
+            logger.error("Failed to send workspace hydration")

@@ -40,6 +40,7 @@ def session_seed_document(
     *,
     goal: Optional[str] = None,
     analogy_history: Optional[list[dict[str, Any]]] = None,
+    quiz_history: Optional[list[dict[str, Any]]] = None,
     prior_session_id: Optional[str] = None,
 ) -> dict[str, Any]:
     doc: dict[str, Any] = {
@@ -54,6 +55,7 @@ def session_seed_document(
         "tab_switch_count": 0,
         "inactivity_streak_seconds": 0,
         "analogy_history": analogy_history or [],
+        "quiz_history": quiz_history or [],
         "state": {
             "socratic_hint_depth": 0,
             "last_tool_called": None,
