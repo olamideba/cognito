@@ -1,7 +1,7 @@
 TOOL_DECLARATIONS = [
     {
         "name": "confirm_session_goal",
-        "description": "Saves the user's stated goal and time limit to begin the session. Call this exactly once, after the user has verbally confirmed both their goal and their available time. Do not call this until both values are known.",
+        "description": "Saves the user's stated goal and time limit to begin the session. Call this exactly once, after the user has verbally confirmed BOTH their goal and their available time. Do not call this until both values are known.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -28,7 +28,7 @@ TOOL_DECLARATIONS = [
     },
     {
         "name": "generate_analogy_visual",
-        "description": "Generates a visual diagram or analogy image to help the user understand a concept they are struggling with. Call this after two Socratic prompts have not resolved the user's confusion. Provide a short concept label and a detailed prompt describing the visual.",
+        "description": "Generates a visual diagram or analogy image to help the user understand a concept they are struggling with. Call this after verbal explanations haven't fully resolved confusion, or upon request. The image_prompt MUST be a highly descriptive narrative paragraph, not keyword soup.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -38,7 +38,7 @@ TOOL_DECLARATIONS = [
                 },
                 "image_prompt": {
                     "type": "string",
-                    "description": "A detailed, descriptive prompt for the image generation model. Describe the visual metaphor, layout, and key elements to include. Example: 'A clean diagram showing a stack of plates being added and removed, each plate labeled with a function call name, with arrows showing push and pop operations.'"
+                    "description": "A detailed, descriptive narrative for the image generation model. You MUST explicitly apply one of three design aesthetics based on the context: 1)[Default] 'Hand-drawn sketchbook style, clean line art, pastel yellow and blue, on a grid paper background, live whiteboard session feel.' 2) [Objects] 'Polished 3D render with depth and studio lighting.' 3) [Historical/Textured] 'Retro print, vintage mid-century textbook style, screen-printed.' The prompt MUST end with '16:9 aspect ratio, set against a clean whiteboard-like background.'"
                 }
             },
             "required": ["concept_label", "image_prompt"]
@@ -66,11 +66,11 @@ TOOL_DECLARATIONS = [
                 },
                 "correct_answer": {
                     "type": "string",
-                    "description": "The exact text of the correct answer. For multiple_choice, provide the full string of the option, not just the letter (e.g., 'Photosynthesis', not 'A', not 'A. Photosynthesis')."
+                    "description": "The exact text of the correct answer. For multiple_choice, provide the full string of the option, not just the letter index (e.g., 'Photosynthesis', not 'A', not 'A. Photosynthesis')."
                 },
                 "hint": {
                     "type": "string",
-                    "description": "Optional hint text shown if the user requests help."
+                    "description": "A brief, Socratic hint shown if the user requests help. It should guide them, not give the answer away."
                 }
             },
             "required": ["component_type", "question"]
@@ -78,7 +78,7 @@ TOOL_DECLARATIONS = [
     },
     {
         "name": "submit_quiz_answer",
-        "description": "Submit a user's answer to a rendered quiz component for validation.",
+        "description": "Submit a user's verbal answer to the rendered quiz component so the UI updates visually. You MUST trigger this whenever a user answers a UI quiz verbally.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -111,7 +111,7 @@ TOOL_DECLARATIONS = [
                 },
                 "note": {
                     "type": "string",
-                    "description": "Brief description of the observed behavior. Example: 'No typing for 120 seconds on shared screen.'"
+                    "description": "Brief description of the observed behavior. Example: 'User answered quiz rapidly with high confidence' or 'User expressed frustration with web search delay.'"
                 }
             },
             "required": ["signal_type", "delta"]

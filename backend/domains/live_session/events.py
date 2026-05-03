@@ -65,6 +65,14 @@ def build_reconnect_message(
     goal = session_snapshot.get("goal")
     time_limit_seconds = session_snapshot.get("time_limit_seconds")
     start_time = session_snapshot.get("start_time")
+    flow_score = session_snapshot.get("flow_score", 100)
+    session_phase = session_snapshot.get("state", {}).get("session_phase", "working")
+    analogy_history = session_snapshot.get("analogy_history", [])
+    quiz_history = session_snapshot.get("quiz_history", [])
+
+    if not any([goal, time_limit_seconds, analogy_history, quiz_history]):
+        return None
+
     remaining_minutes = None
     if time_limit_seconds and start_time:
         try:
@@ -76,20 +84,46 @@ def build_reconnect_message(
             remaining_minutes = max(0, int(remaining_seconds // 60))
         except Exception:
             remaining_minutes = None
-    if goal or time_limit_seconds or remaining_minutes is not None:
-        parts = []
-        if goal:
-            parts.append(f"Goal: {goal}.")
-        if remaining_minutes is not None:
-            parts.append(f"Remaining time: {remaining_minutes} minutes.")
-        elif time_limit_seconds:
-            minutes = int(time_limit_seconds) // 60
-            parts.append(f"Time limit: {minutes} minutes.")
-        parts.append("Continue without re-asking for any already-known fields.")
 
-        return types.Content(
-            role="user",
-            parts=[types.Part(text=" ".join(parts))],
+    parts = ["You are resuming an active session. Do not re-introduce yourself or ask for information you already have."]
+
+    if goal:
+        parts.append(f"The user's goal is: {goal}.")
+
+    if remaining_minutes is not None:
+        parts.append(f"There are approximately {remaining_minutes} minutes remaining.")
+    elif time_limit_seconds:
+        parts.append(f"The session time limit is {int(time_limit_seconds) // 60} minutes.")
+
+    parts.append(f"The user's current flow score is {flow_score}/100 and the session phase is '{session_phase}'.")
+
+    if analogy_history:
+        labels = [item.get("concept", item.get("concept_label", "")) for item in analogy_history if item.get("concept") or item.get("concept_label")]
+        if labels:
+            label_list = ", ".join(f'"{l}"' for l in labels)
+            parts.append(f"The following analogy images have already been shown to the user — do not regenerate them: {label_list}.")
+
+    if quiz_history:
+        correct = sum(1 for q in quiz_history if q.get("is_correct") is True)
+        incorrect = sum(1 for q in quiz_history if q.get("is_correct") is False)
+        unanswered = sum(1 for q in quiz_history if q.get("is_correct") is None)
+        last_quiz = next(
+            (q for q in reversed(quiz_history) if q.get("question")), None
         )
-    return None
+        summary = f"Quiz history: {correct} correct, {incorrect} incorrect, {unanswered} unanswered."
+        if last_quiz:
+            summary += f" The last question asked was: \"{last_quiz['question']}\""
+            if last_quiz.get("is_correct") is True:
+                summary += " — answered correctly."
+            elif last_quiz.get("is_correct") is False:
+                summary += " — answered incorrectly."
+            else:
+                summary += " — not yet answered."
+        parts.append(summary)
 
+    parts.append("Pick up naturally from where the session left off. Welcome the user with a terse summary of the last session.")
+
+    return types.Content(
+        role="user",
+        parts=[types.Part(text=" ".join(parts))],
+    )
