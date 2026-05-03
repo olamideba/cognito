@@ -61,12 +61,12 @@ TOOL_DECLARATIONS = [
                 },
                 "options": {
                     "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of answer options. Required for multiple_choice. Ignored for fill_in_blank and reflection_prompt."
+                    "items": {"type": "string"},
+                    "description": "List of answer options. Required for multiple_choice. Ignored for fill_in_blank and reflection_prompt. For multiple_choice, provide a list of full string options, DO NOT add the letter as a prefix (e.g., ['Photosynthesis', 'Chlorophyll'] is valid, not ['A) Photosynthesis', 'B) Chlorophyll'], not ['A. Photosynthesis', 'B. Chlorophyll])."
                 },
                 "correct_answer": {
                     "type": "string",
-                    "description": "The correct answer. Used for validation on the backend; not sent to the frontend before the user answers."
+                    "description": "The exact text of the correct answer. For multiple_choice, provide the full string of the option, not just the letter (e.g., 'Photosynthesis', not 'A', not 'A. Photosynthesis')."
                 },
                 "hint": {
                     "type": "string",
@@ -88,7 +88,7 @@ TOOL_DECLARATIONS = [
                 },
                 "answer": {
                     "type": "string",
-                    "description": "The answer submitted by the user."
+                    "description": "The answer submitted by the user. If the user answers in natural language, extract the specific keyword or option text that corresponds to their answer (e.g., if the user says 'I think it is A', and option A is 'Photosynthesis', submit 'Photosynthesis')."
                 }
             },
             "required": ["component_id", "answer"]
@@ -119,4 +119,3 @@ TOOL_DECLARATIONS = [
     }
 ]
 
-TOOL_NAMES = {t["name"] for t in TOOL_DECLARATIONS}

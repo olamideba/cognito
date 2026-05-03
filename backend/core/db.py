@@ -1,8 +1,6 @@
-import uuid
 import logging
-import base64
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from google.cloud import firestore, storage
 from google.cloud.storage import Bucket, Blob
 from core.config import get_settings, Settings
@@ -24,48 +22,65 @@ def get_db() -> firestore.AsyncClient:
 SESSIONS_COLLECTION = "cognito_sessions"
 MEMORIES_COLLECTION = "cognito_memories"
 
-def get_storage_bucket(bucket_name) -> Bucket:
+def get_storage_bucket(bucket_name: str) -> Bucket:
     _storage = storage.Client(project=settings.GCP_PROJECT_ID)
     bucket: Bucket = _storage.bucket(bucket_name)
     return bucket
 
-async def create_session() -> str:
-    session_id = str(uuid.uuid4())
-    doc = {
+def session_document_ref(session_id: str):
+    return get_db().collection(SESSIONS_COLLECTION).document(session_id)
+
+
+def memory_document_ref(browser_token: str):
+    return get_db().collection(MEMORIES_COLLECTION).document(browser_token)
+
+
+def session_seed_document(
+    session_id: str,
+    *,
+    goal: Optional[str] = None,
+    analogy_history: Optional[list[dict[str, Any]]] = None,
+    quiz_history: Optional[list[dict[str, Any]]] = None,
+    prior_session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    doc: dict[str, Any] = {
         "session_id": session_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "initializing",
-        "goal": None,
+        "goal": goal,
         "time_limit_seconds": None,
         "start_time": None,
         "flow_score": 100,
         "distraction_events": [],
         "tab_switch_count": 0,
         "inactivity_streak_seconds": 0,
-        "analogy_history": [],
+        "analogy_history": analogy_history or [],
+        "quiz_history": quiz_history or [],
         "state": {
             "socratic_hint_depth": 0,
             "last_tool_called": None,
             "session_phase": "goal_setting"
-        }
+        },
     }
-    await get_db().collection(SESSIONS_COLLECTION).document(session_id).set(doc)
-    return session_id
+    if prior_session_id is not None:
+        doc["prior_session_id"] = prior_session_id
+    return doc
 
-async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
-    doc_ref = get_db().collection(SESSIONS_COLLECTION).document(session_id)
-    doc = await doc_ref.get()
-    return doc.to_dict() if doc.exists else None
 
-async def update_session(session_id: str, updates: Dict[str, Any]) -> None:
-    await get_db().collection(SESSIONS_COLLECTION).document(session_id).update(updates)
+def memory_document(browser_token: str) -> dict[str, Any]:
+    return {
+        "browser_token": browser_token,
+        "session_count": 0,
+        "prior_goals": [],
+        "concepts_struggled_with": [],
+        "user_profile_context": {
+            "expertise_level": "Beginner",
+            "preferred_analogy_type": "Visual",
+        },
+    }
 
-async def append_distraction_event(session_id: str, event: Dict[str, Any]) -> None:
-    await get_db().collection(SESSIONS_COLLECTION).document(session_id).update({
-        "distraction_events": firestore.ArrayUnion([event])
-    })
 
-async def upload_to_gcs(image_bytes, destination_blob_name) -> str:
+async def upload_png(image_bytes: bytes, destination_blob_name: str) -> str:
     try:
         bucket: Bucket = get_storage_bucket(bucket_name=settings.GCP_IMAGE_BUCKET)
         blob: Blob = bucket.blob(destination_blob_name)
@@ -74,77 +89,4 @@ async def upload_to_gcs(image_bytes, destination_blob_name) -> str:
         return blob.public_url
     except Exception as e:
         logger.error(f"Failed to upload image to bucket: {e}")
-    
-
-async def append_analogy(
-    session_id: str,
-    concept: str,
-    base64_string: str,
-    timestamp: Optional[str] = None,
-) -> None:
-
-    image_bytes: bytes = base64.b64decode(base64_string)
-    image_url: str = await upload_to_gcs(image_bytes=image_bytes, destination_blob_name=f"analogies/{session_id}/{concept}.png")
-    
-    entry = {
-        "concept": concept, 
-        "image_url": image_url, 
-        "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
-    }
-    await get_db().collection(SESSIONS_COLLECTION).document(session_id).update({
-        "analogy_history": firestore.ArrayUnion([entry])
-    })
-    return image_url
-
-async def resume_session(prior_session_id: str) -> str:
-    prior_session = await get_session(prior_session_id)
-    if not prior_session:
-        return await create_session()
-    
-    session_id = str(uuid.uuid4())
-    doc = {
-        "session_id": session_id,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "status": "initializing",
-        "goal": prior_session.get("goal"),
-        "time_limit_seconds": None,
-        "start_time": None,
-        "flow_score": 100,
-        "distraction_events": [],
-        "tab_switch_count": 0,
-        "inactivity_streak_seconds": 0,
-        "analogy_history": prior_session.get("analogy_history", []),
-        "prior_session_id": prior_session_id,
-        "state": {
-            "socratic_hint_depth": 0,
-            "last_tool_called": None,
-            "session_phase": "goal_setting"
-        }
-    }
-    await get_db().collection(SESSIONS_COLLECTION).document(session_id).set(doc)
-    return session_id
-
-async def get_memory(browser_token: str) -> Optional[Dict[str, Any]]:
-    doc_ref = get_db().collection(MEMORIES_COLLECTION).document(browser_token)
-    doc = await doc_ref.get()
-    return doc.to_dict() if doc.exists else None
-
-async def update_memory(browser_token: str, updates: Dict[str, Any]) -> None:
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    doc_ref = get_db().collection(MEMORIES_COLLECTION).document(browser_token)
-    doc = await doc_ref.get()
-    if doc.exists:
-        await doc_ref.update(updates)
-    else:
-        full_doc = {
-            "browser_token": browser_token,
-            "session_count": 0,
-            "prior_goals": [],
-            "concepts_struggled_with": [],
-            "user_profile_context": {
-                "expertise_level": "Beginner",
-                "preferred_analogy_type": "Visual"
-            }
-        }
-        full_doc.update(updates)
-        await doc_ref.set(full_doc)
+        raise

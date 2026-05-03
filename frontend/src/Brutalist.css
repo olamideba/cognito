@@ -143,6 +143,98 @@ body {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.reset-session-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-medium);
+  background: var(--color-white);
+  color: var(--color-black);
+  cursor: pointer;
+  transition: all var(--transition-speed) var(--transition-timing);
+}
+
+.reset-session-btn:hover {
+  background-color: #ff4d4d; /* Red accent */
+  color: var(--color-white);
+}
+
+/* ─── Brutalist Modal ───────────────────────── */
+.brutalist-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.brutalist-modal {
+  width: 90%;
+  max-width: 500px;
+  background: var(--color-white);
+  border: 4px solid var(--color-black);
+  padding: 2.5rem;
+  box-shadow: 10px 10px 0px 0px rgba(0, 0, 0, 1);
+  animation: modal-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modal-pop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.brutalist-btn-outline {
+  background: transparent;
+  color: var(--color-black);
+  border: 2px solid var(--color-black);
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.brutalist-btn-outline:hover {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.brutalist-btn-destructive {
+  background: var(--color-black);
+  color: var(--color-white);
+  border: 2px solid var(--color-black);
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.brutalist-btn-destructive:hover {
+  background: #ff4d4d;
+  border-color: #ff4d4d;
 }
 
 /* ─── Session Main (3-Column) ────────────────── */

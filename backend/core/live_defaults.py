@@ -7,7 +7,13 @@ from core.config import get_settings, Settings
 
 settings: Settings = get_settings()
 DEFAULT_RESPONSE_MODALITIES: tuple[types.Modality, ...] = (types.Modality.AUDIO,)
-SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent.parent / "SYSTEM_PROMPT.md"
+SYSTEM_PROMPT_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "domains"
+    / "agents"
+    / "prompts"
+    / "system.md"
+)
 
 
 def get_default_model() -> str:

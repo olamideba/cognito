@@ -9,7 +9,7 @@ from core.live_defaults import (
     get_default_voice_name,
     get_system_instruction,
 )
-from tools.registry import TOOL_DECLARATIONS
+from domains.agents.module import get_live_tool_declarations
 
 router = APIRouter(prefix="/api/live")
 
@@ -19,7 +19,7 @@ def get_live_config() -> LiveConfigResponse:
         LiveToolConfig(type="googleSearch", googleSearch={}),
         LiveToolConfig(
             type="functionDeclarations",
-            functionDeclarations=TOOL_DECLARATIONS,
+            functionDeclarations=get_live_tool_declarations(),
         ),
     ]
 
