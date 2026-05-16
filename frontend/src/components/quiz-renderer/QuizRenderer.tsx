@@ -30,7 +30,10 @@ function QuizCard({
   isActive,
   onAnswerSubmitted,
 }: {
-  quiz: QuizComponentPayload;
+  quiz: QuizComponentPayload & {
+    user_answer?: string | null;
+    is_correct?: boolean | null;
+  };
   sessionId: string | null;
   isActive: boolean;
   onAnswerSubmitted?: (
@@ -38,10 +41,25 @@ function QuizCard({
     result: QuizSubmissionResult
   ) => void;
 }) {
-  const [submitted, setSubmitted] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [textValue, setTextValue] = useState("");
-  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [submitted, setSubmitted] = useState(!!quiz.user_answer);
+  const [selectedOption, setSelectedOption] = useState<string | null>(
+    quiz.component_type === "multiple_choice" || quiz.component_type === "true_false"
+      ? quiz.user_answer ?? null
+      : null
+  );
+  const [textValue, setTextValue] = useState(
+    quiz.component_type === "fill_in_blank" || quiz.component_type === "reflection_prompt"
+      ? quiz.user_answer ?? ""
+      : ""
+  );
+  const [feedback, setFeedback] = useState<Feedback>(
+    quiz.user_answer
+      ? {
+          correct: !!quiz.is_correct,
+          message: quiz.is_correct ? "Correct!" : "Incorrect",
+        }
+      : null
+  );
 
   const submitAnswer = async (answer: string) => {
     if (!sessionId || submitted) return;

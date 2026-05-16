@@ -43,6 +43,14 @@ export type QuizAnswerResultPayload = {
   is_correct: boolean;
 };
 
+export type WorkspaceHydratedPayload = {
+  analogy_history: AnalogyGeneratedPayload[];
+  quiz_history: (QuizComponentPayload & {
+    user_answer: string | null;
+    is_correct: boolean | null;
+  })[];
+};
+
 export type CognitoEnvelope =
   | { type: "session_created"; payload: SessionCreatedPayload }
   | { type: "session_initialized"; payload: SessionInitializedPayload }
@@ -50,7 +58,8 @@ export type CognitoEnvelope =
   | { type: "quiz_component"; payload: QuizComponentPayload }
   | { type: "flow_update"; payload: FlowUpdatePayload }
   | { type: "timer_tick"; payload: TimerTickPayload }
-  | { type: "quiz_answer_result"; payload: QuizAnswerResultPayload };
+  | { type: "quiz_answer_result"; payload: QuizAnswerResultPayload }
+  | { type: "workspace_hydrated"; payload: WorkspaceHydratedPayload };
 
 export type CognitoEnvelopeType = CognitoEnvelope["type"];
 
@@ -68,6 +77,7 @@ const ENVELOPE_TYPES = new Set<string>([
   "flow_update",
   "timer_tick",
   "quiz_answer_result",
+  "workspace_hydrated",
 ]);
 
 export function isCognitoEnvelope(data: unknown): data is CognitoEnvelope {

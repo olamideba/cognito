@@ -1,17 +1,17 @@
 /* LandingPage.css — Cognito Entry / Onboarding Screen */
 
-/* ─── Full-screen container ─── */
+/* ─── Full-screen container (Now scrollable) ─── */
 .landing {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  width: 100%;
+  min-height: 100vh;
   background-color: var(--color-white);
   display: flex;
   flex-direction: column;
+  overflow-x: clip;
 }
 
-/* ─── Grid overlay ─── */
+/* ─── Grid overlay (Fixed backdrop) ─── */
 .landing__grid {
   position: fixed;
   inset: 0;
@@ -24,7 +24,7 @@
   background-size: 40px 40px;
 }
 
-/* ─── Left accent bar (visible in screenshot) ─── */
+/* ─── Left accent bar ─── */
 .landing__accent-bar {
   position: fixed;
   left: 0;
@@ -48,31 +48,87 @@
   top: 0;
   left: 0;
   z-index: 50;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
 }
 
 .landing__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
   font-family: 'Space Grotesk', var(--font-primary);
   font-size: 1.5rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: -0.04em;
   color: var(--color-black);
+  text-decoration: none;
+  flex: 1;
 }
 
-.landing__meta-header {
+.landing__brand-logo {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.landing__brand-text {
+  line-height: 1;
+}
+
+.landing__nav-links {
   display: none;
   gap: 2rem;
   font-family: 'Space Grotesk', var(--font-primary);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #777;
+  flex: 2;
+  justify-content: center;
+}
+
+.landing__nav-links a {
+  color: #555;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.landing__nav-links a:hover {
+  color: var(--color-black);
+}
+
+.landing__header-right {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.landing__header-cta {
+  background-color: var(--color-black);
+  color: var(--color-white);
+  border: 2px solid var(--color-black);
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.landing__header-cta:hover {
+  background-color: var(--color-white);
+  color: var(--color-black);
 }
 
 @media (min-width: 768px) {
-  .landing__meta-header {
+  .landing__nav-links {
     display: flex;
   }
 }
@@ -82,23 +138,108 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1.5rem;
   position: relative;
   z-index: 10;
+  padding-top: 5rem; /* offset for sticky header */
 }
 
-/* ─── FLOW watermark ─── */
+/* ─── Shared Section Styles ─── */
+.landing__section {
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  max-width: 80rem;
+  margin: 0 auto;
+  width: 100%;
+  scroll-margin-top: 6.5rem;
+}
+
+.landing__section-header {
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.landing__section-kicker {
+  border: 2px solid var(--color-black);
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--color-white);
+}
+
+.landing__section-title {
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--color-black);
+}
+
+.landing__section-title:not(.landing__section-title--sentence) {
+  text-transform: uppercase;
+}
+
+.landing__section-title--sentence {
+  text-transform: none;
+}
+
+.landing__section-copy {
+  margin: 0;
+  max-width: 42rem;
+  font-family: 'Inter', var(--font-secondary);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: #444;
+}
+
+/* legacy single-title spacing for any section without the new header */
+.landing__section > .landing__section-title {
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+/* ─── Hero Section ─── */
+.landing__hero {
+  min-height: calc(100vh - 5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  scroll-margin-top: 6.5rem;
+}
+
+/* FLOW watermark only in hero */
 .landing__watermark {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   pointer-events: none;
+  width: 100%;
 }
 
 .landing__watermark-text {
@@ -113,19 +254,14 @@
   letter-spacing: -0.04em;
 }
 
-/* ─── Content container ─── */
 .landing__content {
   position: relative;
   z-index: 10;
-  width: 100%;
-  max-width: 64rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
 }
 
-/* ─── Structural divider ─── */
 .landing__divider {
   width: 4rem;
   height: 4px;
@@ -133,26 +269,41 @@
   margin-bottom: 3rem;
 }
 
-/* ─── Headline ─── */
 .landing__headline {
   font-family: 'Space Grotesk', var(--font-primary);
   font-weight: 700;
-  font-size: clamp(2.5rem, 8vw, 7.5rem);
-  line-height: 0.9;
+  font-size: clamp(2.5rem, 8vw, 6.5rem);
+  line-height: 0.95;
   letter-spacing: -0.04em;
   text-transform: uppercase;
   color: var(--color-black);
-  margin: 0 0 4rem 0;
+  margin: 0 0 1.5rem 0;
   max-width: 80rem;
 }
 
-.landing__headline-break {
+.landing__headline-highlight {
   display: block;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  padding: 0 1rem;
+  transform: skew(-5deg);
+  display: inline-block;
 }
 
-/* ─── CTA button ─── */
-.landing__cta-wrapper {
-  position: relative;
+.landing__sub-headline {
+  font-family: 'Inter', var(--font-secondary);
+  font-size: 1.25rem;
+  color: #444;
+  max-width: 40rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.landing__hero-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
 }
 
 .landing__cta {
@@ -161,18 +312,16 @@
   color: var(--color-white);
   font-family: 'Space Grotesk', var(--font-primary);
   font-weight: 700;
-  font-size: 1.25rem;
-  padding: 1.5rem 4rem;
+  font-size: 1.125rem;
+  padding: 1.25rem 3rem;
   border: 2px solid var(--color-black);
   text-transform: uppercase;
   letter-spacing: 0.15em;
   cursor: pointer;
-  transition:
-    background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    color 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms ease;
   position: relative;
   z-index: 2;
+  text-decoration: none;
 }
 
 .landing__cta:hover {
@@ -180,11 +329,20 @@
   color: var(--color-black);
 }
 
-.landing__cta:active {
-  transform: scale(0.97);
+.landing__cta--secondary {
+  background-color: transparent;
+  color: var(--color-black);
 }
 
-/* Dashed outline around CTA (visible in screenshot) */
+.landing__cta--secondary:hover {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.landing__cta-wrapper {
+  position: relative;
+}
+
 .landing__cta-outline {
   position: absolute;
   inset: -6px;
@@ -193,44 +351,246 @@
   z-index: 1;
 }
 
-/* ─── Technical metadata cluster ─── */
-.landing__meta-cluster {
-  margin-top: 5rem;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 3rem;
-  font-family: 'Space Grotesk', var(--font-primary);
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: #777;
+/* ─── Multi-column Grids & Cards ─── */
+.landing__grid-container {
+  display: grid;
+  gap: 1.5rem;
+  width: 100%;
 }
 
-.landing__meta-item {
+.landing__grid-2 {
+  grid-template-columns: 1fr;
+}
+
+.landing__grid-3 {
+  grid-template-columns: 1fr;
+}
+
+.landing__grid-4 {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .landing__grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .landing__grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .landing__grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .landing__grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+.landing__card {
+  border: 2px solid var(--color-black);
+  border-radius: 16px;
+  padding: 1.5rem;
+  background: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.landing__card:hover {
+  transform: translateY(-4px);
+  box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+}
+
+.landing__card-title {
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.landing__card-body {
+  font-family: 'Inter', var(--font-secondary);
+  font-size: 1rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+.landing__card-icon {
+  margin-bottom: 0.5rem;
+  color: var(--color-black);
+}
+
+/* ─── Demo Section ─── */
+.landing__demo-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #f5f5f5;
+  border: 2px dashed rgba(0,0,0,0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.landing__demo-placeholder:hover {
+  background-color: #eee;
+}
+
+/* ─── Flow Section Specific ─── */
+.landing__flow-step {
+  position: relative;
+}
+
+.landing__flow-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: -1rem;
+  transform: translateY(-50%) translateX(50%);
+  color: rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+@media (min-width: 1024px) {
+  .landing__flow-arrow {
+    display: block;
+  }
+}
+
+/* ─── Contact Card ─── */
+.landing__contact-shell {
+  width: 100%;
+  max-width: 70rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.landing__contact-header {
+  margin-bottom: 0.5rem;
+}
+
+.landing__contact-kicker {
+}
+
+.landing__contact-title {
+}
+
+.landing__contact-copy {
+}
+
+.landing__contact-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .landing__contact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.landing__contact-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.6rem;
+  border: 2px solid var(--color-black);
+  border-radius: 2rem;
+  background: var(--color-white);
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.1);
+  color: var(--color-black);
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.landing__contact-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 0 rgba(0, 0, 0, 0.12);
+}
+
+.landing__contact-link-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: 0 0 3.5rem;
+  border: 2px solid var(--color-black);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-white);
+}
+
+.landing__contact-link-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.landing__contact-link-label {
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #666;
+}
+
+.landing__contact-link-value {
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.landing__contact-link-arrow {
+  color: #666;
+  flex: 0 0 auto;
+}
+
+.landing__social-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.landing__social-links a {
+  color: var(--color-black);
+  text-decoration: none;
+  font-family: 'Space Grotesk', var(--font-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  transition: background-color 150ms ease;
 }
 
-.landing__meta-item .material-symbols-outlined {
-  font-size: 0.875rem;
+.landing__social-links a:hover {
+  background-color: rgba(0,0,0,0.05);
 }
 
 /* ─── Footer ─── */
 .landing__footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
   width: 100%;
-  padding: 2.5rem 2rem;
+  padding: 3rem 2rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: flex-start;
   border-top: 2px solid rgba(0, 0, 0, 0.08);
   z-index: 20;
+  background-color: var(--color-white);
+  gap: 1rem;
+  position: relative;
 }
 
 @media (min-width: 768px) {
@@ -266,7 +626,6 @@
 }
 
 .landing__footer-right {
-  margin-top: 1rem;
   font-family: 'Space Grotesk', var(--font-primary);
   font-size: 0.625rem;
   font-weight: 700;
@@ -279,64 +638,16 @@
 
 @media (min-width: 768px) {
   .landing__footer-right {
-    margin-top: 0;
     text-align: right;
   }
 }
 
 /* ─── Entrance animation ─── */
 @keyframes landing-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.landing__content {
+.landing__hero .landing__content {
   animation: landing-fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* ─── Responsive adjustments ─── */
-@media (max-width: 640px) {
-  .landing__header {
-    padding: 0 1rem;
-    height: 4rem;
-  }
-
-  .landing__brand {
-    font-size: 1.125rem;
-  }
-
-  .landing__divider {
-    margin-bottom: 2rem;
-  }
-
-  .landing__headline {
-    margin-bottom: 2.5rem;
-  }
-
-  .landing__cta {
-    font-size: 1rem;
-    padding: 1.25rem 2.5rem;
-  }
-
-  .landing__meta-cluster {
-    margin-top: 3rem;
-    gap: 1.5rem;
-  }
-
-  .landing__footer {
-    padding: 1.5rem 1rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .landing__cta {
-    font-size: 1.375rem;
-    padding: 1.5rem 4.5rem;
-  }
 }

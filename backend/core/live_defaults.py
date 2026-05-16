@@ -1,23 +1,28 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 from google.genai import types
+from core.config import get_settings, Settings
 
-
-DEFAULT_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
-DEFAULT_VOICE_NAME = "Puck"
+settings: Settings = get_settings()
 DEFAULT_RESPONSE_MODALITIES: tuple[types.Modality, ...] = (types.Modality.AUDIO,)
-SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent.parent / "SYSTEM_PROMPT.md"
+SYSTEM_PROMPT_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "domains"
+    / "agents"
+    / "prompts"
+    / "system.md"
+)
 
 
 def get_default_model() -> str:
-    return os.getenv("COGNITO_MODEL", DEFAULT_MODEL)
+    return settings.COGNITO_MODEL
 
 
 def get_default_voice_name() -> str:
-    return os.getenv("COGNITO_VOICE_NAME", DEFAULT_VOICE_NAME)
+    return settings.DEFAULT_VOICE_NAME
 
 
 def resolve_voice_name(voice_name: Optional[str]) -> str:
@@ -31,4 +36,6 @@ def get_default_response_modalities() -> list[types.Modality]:
 
 
 def get_system_instruction() -> str:
-    return SYSTEM_PROMPT_PATH.read_text()
+    prompt_template = SYSTEM_PROMPT_PATH.read_text()
+    current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+    return prompt_template.format(current_datetime=current_datetime)
