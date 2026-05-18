@@ -6,6 +6,7 @@ type SessionHeaderProps = {
   goal: string | null;
   totalSeconds: number | null;
   startTime: string | null;
+  onTimeUp?: () => void;
 };
 
 function formatTime(seconds: number): string {
@@ -20,10 +21,12 @@ export default function SessionHeader({
   goal,
   totalSeconds,
   startTime,
+  onTimeUp,
 }: SessionHeaderProps) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [goalExpanded, setGoalExpanded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeUpFiredRef = useRef(false);
 
   useEffect(() => {
     if (intervalRef.current) {
@@ -33,6 +36,7 @@ export default function SessionHeader({
 
     if (status !== "active" || !startTime || !totalSeconds) {
       setRemaining(null);
+      timeUpFiredRef.current = false;
       return;
     }
 
@@ -41,6 +45,11 @@ export default function SessionHeader({
       const elapsed = Math.floor((Date.now() - start) / 1000);
       const left = Math.max(0, totalSeconds - elapsed);
       setRemaining(left);
+
+      if (left <= 0 && !timeUpFiredRef.current) {
+        timeUpFiredRef.current = true;
+        onTimeUp?.();
+      }
     };
 
     tick();
@@ -49,7 +58,7 @@ export default function SessionHeader({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [status, startTime, totalSeconds]);
+  }, [status, startTime, totalSeconds, onTimeUp]);
 
   if (
     status === "complete" ||
