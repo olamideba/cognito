@@ -40,12 +40,31 @@ async def generate_analogy_visual(
     image_prompt: str,
     tool_context: ToolContext | None = None,
 ) -> dict:
+    import asyncio
+
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    result = await generate_analogy_record(session_id, concept_label, image_prompt)
-    await send_ui_envelope({"type": "analogy_generated", "payload": result})
-    return result
+
+    # Spawn image generation in the background so the model can keep talking
+    async def _generate_and_push():
+        try:
+            result = await generate_analogy_record(session_id, concept_label, image_prompt)
+            await send_ui_envelope({"type": "analogy_generated", "payload": result})
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Background analogy generation failed for '%s'", concept_label
+            )
+
+    asyncio.create_task(_generate_and_push())
+
+    # Return immediately so the model is unblocked and can continue speaking
+    return {
+        "status": "generating",
+        "message": f"Generating visual analogy for '{concept_label}'. The image will appear in the workspace shortly.",
+        "concept_label": concept_label,
+    }
 
 
 async def render_quiz_component(
