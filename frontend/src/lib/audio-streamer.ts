@@ -34,6 +34,8 @@ export class AudioStreamer {
   public gainNode: GainNode;
   public source: AudioBufferSourceNode;
   private endOfQueueAudioSource: AudioBufferSourceNode | null = null;
+  // Track all scheduled sources so we can force-stop them on interrupt
+  private activeSources: Set<AudioBufferSourceNode> = new Set();
 
   public onComplete = () => {};
 
@@ -144,6 +146,7 @@ export class AudioStreamer {
       const audioData = this.audioQueue.shift()!;
       const audioBuffer = this.createAudioBuffer(audioData);
       const source = this.context.createBufferSource();
+      this.activeSources.add(source);
 
       if (this.audioQueue.length === 0) {
         if (this.endOfQueueAudioSource) {
@@ -151,6 +154,7 @@ export class AudioStreamer {
         }
         this.endOfQueueAudioSource = source;
         source.onended = () => {
+          this.activeSources.delete(source);
           if (
             !this.audioQueue.length &&
             this.endOfQueueAudioSource === source
@@ -158,6 +162,10 @@ export class AudioStreamer {
             this.endOfQueueAudioSource = null;
             this.onComplete();
           }
+        };
+      } else {
+        source.onended = () => {
+          this.activeSources.delete(source);
         };
       }
 
@@ -223,16 +231,26 @@ export class AudioStreamer {
       this.checkInterval = null;
     }
 
-    this.gainNode.gain.linearRampToValueAtTime(
-      0,
-      this.context.currentTime + 0.1
-    );
+    // Immediately silence — no ramp, instant cut on interrupt
+    this.gainNode.gain.cancelScheduledValues(this.context.currentTime);
+    this.gainNode.gain.setValueAtTime(0, this.context.currentTime);
+
+    // Force-stop all pre-scheduled audio sources
+    for (const src of this.activeSources) {
+      try {
+        src.stop();
+      } catch {
+        // source may already have finished
+      }
+    }
+    this.activeSources.clear();
+    this.endOfQueueAudioSource = null;
 
     setTimeout(() => {
       this.gainNode.disconnect();
       this.gainNode = this.context.createGain();
       this.gainNode.connect(this.context.destination);
-    }, 200);
+    }, 50);
   }
 
   async resume() {
