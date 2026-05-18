@@ -4,8 +4,10 @@ from datetime import datetime, timezone
 
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 
 from core.config import Settings, get_settings
+from core.utils import retry_with_backoff
 from domains.mentor.repository import append_analogy
 from schemas.generate import (
     FALLBACK_SVG,
@@ -26,6 +28,7 @@ def _build_prompt(concept_label: str, image_prompt: str) -> str:
     )
 
 
+@retry_with_backoff(retries=3, backoff_in_seconds=2.0, max_delay=10.0, exceptions=(APIError,))
 async def generate_image_result(
     concept_label: str, image_prompt: str
 ) -> ImageGenerationResult:

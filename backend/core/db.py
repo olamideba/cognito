@@ -4,6 +4,7 @@ from typing import Any, Optional
 from google.cloud import firestore, storage
 from google.cloud.storage import Bucket, Blob
 from core.config import get_settings, Settings
+from core.utils import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 settings: Settings = get_settings()
@@ -80,6 +81,7 @@ def memory_document(browser_token: str) -> dict[str, Any]:
     }
 
 
+@retry_with_backoff(retries=3, backoff_in_seconds=1.0, max_delay=8.0, exceptions=(Exception,))
 async def upload_png(image_bytes: bytes, destination_blob_name: str) -> str:
     try:
         bucket: Bucket = get_storage_bucket(bucket_name=settings.GCP_IMAGE_BUCKET)
