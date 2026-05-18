@@ -21,7 +21,7 @@ echo -e "\033[0;32mStarting Cognito Development Environment...\033[0m"
 
 # Start Backend
 echo -e "\033[0;34m[Backend]\033[0m Starting on http://0.0.0.0:8000"
-(cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload) &
+(cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000) &
 BACKEND_PID=$!
 
 # Start Frontend
