@@ -90,6 +90,18 @@ This project delivers an end-to-end agentic tutoring experience:
 
 ## Setup
 
+### Using Makefile (Recommended)
+
+```bash
+# Install all dependencies
+make setup
+
+# Start both backend and frontend
+make dev
+```
+
+### Manual Setup
+
 ### 1. Backend
 
 ```bash

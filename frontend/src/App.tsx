@@ -387,6 +387,7 @@ export function AppInner() {
           goal={sessionGoal}
           totalSeconds={sessionTotalSeconds}
           startTime={sessionStartTime}
+          onTimeUp={disconnect}
         />
         <div className="top-header__actions">
           <button 

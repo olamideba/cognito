@@ -116,9 +116,20 @@ function ControlTray({
       const mediaStream = await next.start();
       setActiveVideoStream(mediaStream);
       onVideoStreamChange(mediaStream);
+
+      // Notify the model that a new visual source is active
+      const label = next.type === "screen" ? "screen" : "camera";
+      client.send([{
+        text: `[System] The user has started sharing their ${label}. You can now see their ${label} content in the video frames being sent to you. Acknowledge this briefly and naturally.`,
+      }]);
     } else {
       setActiveVideoStream(null);
       onVideoStreamChange(null);
+
+      // Notify the model that visual sources have been turned off
+      client.send([{
+        text: `[System] The user has stopped sharing their screen/camera. Video frames are no longer being sent.`,
+      }]);
     }
 
     videoStreams.filter((msr) => msr !== next).forEach((msr) => msr.stop());

@@ -93,7 +93,7 @@ async def _initialize_session_state(requested_session_id: Optional[str]) -> Live
 
 def _build_run_config(voice_name: Optional[str]) -> RunConfig:
     resolved_voice_name = resolve_voice_name(voice_name)
-    return RunConfig(
+    config = RunConfig(
         streaming_mode=StreamingMode.BIDI,
         response_modalities=get_default_response_modalities(),
         speech_config=types.SpeechConfig(
@@ -104,6 +104,13 @@ def _build_run_config(voice_name: Optional[str]) -> RunConfig:
             )
         ),
     )
+    logger.info(
+        "RunConfig built: streaming_mode=%s, response_modalities=%s, voice=%s",
+        config.streaming_mode,
+        config.response_modalities,
+        resolved_voice_name,
+    )
+    return config
 
 
 async def _ensure_adk_session(session_id: str) -> None:
@@ -196,12 +203,25 @@ async def _forward_runner_events(
         set_live_context(state.session_id, ws)
         await ws.send_json({"setupComplete": {}})
 
+        logger.info(
+            "Session %s: is_reconnect=%s, has_snapshot=%s",
+            state.session_id,
+            state.is_reconnect,
+            state.session_snapshot is not None,
+        )
+
         if state.session_snapshot:
             await _hydrate_client_workspace(ws, state.session_snapshot)
 
         if state.is_reconnect and state.session_snapshot:
             content = build_reconnect_message(state.session_snapshot)
             if content is not None:
+                logger.info(
+                    "Sending reconnect message (%d parts, %d chars): %.200s",
+                    len(content.parts) if content.parts else 0,
+                    sum(len(p.text or "") for p in (content.parts or [])),
+                    content.parts[0].text if content.parts else "(empty)",
+                )
                 live_request_queue.send_content(content)
 
         async for event in runner.run_live(
@@ -217,8 +237,13 @@ async def _forward_runner_events(
                 except Exception:
                     # Connection likely closed by client already
                     break
-    except Exception:
-        logger.exception("Error while forwarding runner events")
+    except Exception as exc:
+        logger.exception(
+            "Error in runner events (session=%s, reconnect=%s): %s",
+            state.session_id,
+            state.is_reconnect,
+            exc,
+        )
 
 
 async def _hydrate_client_workspace(ws: WebSocket, session_snapshot: dict) -> None:

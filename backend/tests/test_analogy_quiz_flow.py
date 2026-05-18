@@ -96,11 +96,13 @@ class AnalogyQuizFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_render_quiz_component_hides_correct_answer_in_ui_payload(self) -> None:
         mock_get_session = AsyncMock(return_value={"state": {}})
         mock_update = AsyncMock()
+        mock_append_quiz = AsyncMock()
         fixed_component_id = UUID("12345678-1234-5678-1234-567812345678")
 
         with (
             patch("domains.mentor.module.get_session", mock_get_session),
             patch("domains.mentor.module.update_session", mock_update),
+            patch("domains.mentor.module.append_quiz", mock_append_quiz),
             patch(
                 "domains.mentor.module.uuid.uuid4",
                 return_value=fixed_component_id,
