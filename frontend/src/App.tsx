@@ -18,6 +18,7 @@ import type {
   AnalogyGeneratedPayload,
   QuizComponentPayload,
   FlowUpdatePayload,
+  ErrorPayload,
 } from "./lib/ws-envelope";
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
 import { useLoggerStore } from "./lib/store-logger";
@@ -33,6 +34,7 @@ import {
   Monitor,
   Camera,
   X,
+  ServerCrash,
 } from "lucide-react";
 import { useWebcam } from "./hooks/use-webcam";
 import { useScreenCapture } from "./hooks/use-screen-capture";
@@ -108,6 +110,8 @@ export function AppInner() {
   const [hasNewAnalogy, setHasNewAnalogy] = useState(false);
   const [hasNewQuiz, setHasNewQuiz] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
   const modalRef = useRef<HTMLDivElement>(null);
 
   const webcam = useWebcam();
@@ -123,6 +127,7 @@ export function AppInner() {
   useEffect(() => {
     if (connected) {
       setIsConnecting(false);
+      setSessionError(null);
     }
   }, [connected]);
 
@@ -172,18 +177,18 @@ export function AppInner() {
         text:
           result.status === "validated"
             ? [
-                `The user answered the quiz question: "${quiz.question}"`,
-                `Selected answer: "${result.answer}".`,
-                `Correct: ${result.isCorrect ? "yes" : "no"}.`,
-                `Feedback: ${result.feedback}.`,
-                "Respond briefly to the user's selection.",
-              ].join(" ")
+              `The user answered the quiz question: "${quiz.question}"`,
+              `Selected answer: "${result.answer}".`,
+              `Correct: ${result.isCorrect ? "yes" : "no"}.`,
+              `Feedback: ${result.feedback}.`,
+              "Respond briefly to the user's selection.",
+            ].join(" ")
             : [
-                `The user tried to answer the quiz question: "${quiz.question}"`,
-                `Selected answer: "${result.answer}".`,
-                "The answer submission could not be validated by the backend.",
-                "Acknowledge that briefly and continue helping.",
-              ].join(" "),
+              `The user tried to answer the quiz question: "${quiz.question}"`,
+              `Selected answer: "${result.answer}".`,
+              "The answer submission could not be validated by the backend.",
+              "Acknowledge that briefly and continue helping.",
+            ].join(" "),
       },
     ];
     client.send(parts, true);
@@ -243,6 +248,12 @@ export function AppInner() {
           if (h.quiz_history) {
             setQuizEntries(h.quiz_history);
           }
+          break;
+        }
+
+        case "error": {
+          const e = envelope.payload as ErrorPayload;
+          setSessionError(e.message);
           break;
         }
 
@@ -390,8 +401,8 @@ export function AppInner() {
           onTimeUp={disconnect}
         />
         <div className="top-header__actions">
-          <button 
-            className="reset-session-btn" 
+          <button
+            className="reset-session-btn"
             onClick={() => setShowResetModal(true)}
             title="Reset Workspace"
             aria-label="Reset Workspace"
@@ -405,11 +416,11 @@ export function AppInner() {
       {/* ─── Reset Confirmation Modal ─── */}
       {showResetModal && (
         <div className="brutalist-modal-overlay">
-          <div 
-            className="brutalist-modal" 
+          <div
+            className="brutalist-modal"
             ref={modalRef}
-            role="dialog" 
-            aria-modal="true" 
+            role="dialog"
+            aria-modal="true"
             aria-labelledby="modal-title"
           >
             <h2 id="modal-title" className="brutalist-h2">RESET WORKSPACE?</h2>
@@ -434,8 +445,8 @@ export function AppInner() {
         <aside className="session-drawer session-drawer--left">
           {activeDrawer === 'analogy' ? (
             <>
-              <button 
-                className="drawer-collapse-btn drawer-collapse-btn--left" 
+              <button
+                className="drawer-collapse-btn drawer-collapse-btn--left"
                 onClick={() => setActiveDrawer('none')}
                 title="Collapse Analogy Window"
               >
@@ -485,6 +496,28 @@ export function AppInner() {
                 <h1 className="transcript-card__title">Session Transcript</h1>
               </div>
             </header>
+            {sessionError && (
+              <div style={{
+                background: "#fff3cd",
+                border: "2px solid #000",
+                padding: "0.5rem 0.75rem",
+                marginBottom: "0.75rem",
+                fontSize: "0.75rem",
+                fontFamily: "var(--font-primary)",
+                textTransform: "uppercase",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}>
+                <span><ServerCrash size={16}/> I have encountered an issue while fulfilling your request. — {sessionError}</span>
+                <button
+                  onClick={() => setSessionError(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                >
+                  <X size={16}/>
+                </button>
+              </div>
+            )}
             <div className="transcript-card__body" ref={loggerRef}>
               <Logger filter="none" />
             </div>
@@ -559,8 +592,8 @@ export function AppInner() {
         <aside className="session-drawer session-drawer--right">
           {activeDrawer === 'quiz' ? (
             <>
-              <button 
-                className="drawer-collapse-btn drawer-collapse-btn--right" 
+              <button
+                className="drawer-collapse-btn drawer-collapse-btn--right"
                 onClick={() => setActiveDrawer('none')}
                 title="Collapse Quiz Window"
               >
