@@ -10,6 +10,7 @@ from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.genai.errors import APIError 
 from google.genai import types
 
 from core.live_defaults import get_default_response_modalities, resolve_voice_name
@@ -224,19 +225,50 @@ async def _forward_runner_events(
                 )
                 live_request_queue.send_content(content)
 
-        async for event in runner.run_live(
-            user_id=state.session_id,
-            session_id=state.session_id,
-            run_config=run_config,
-            live_request_queue=live_request_queue,
-        ):
-            event_json_str = serialize_event(event)
-            if event_json_str:
-                try:
-                    await ws.send_text(event_json_str)
-                except Exception:
-                    # Connection likely closed by client already
-                    break
+        try:
+            async for event in runner.run_live(
+                user_id=state.session_id,
+                session_id=state.session_id,
+                run_config=run_config,
+                live_request_queue=live_request_queue,
+            ):
+                event_json_str = serialize_event(event)
+                if event_json_str:
+                    try:
+                        await ws.send_text(event_json_str)
+                    except Exception:
+                        break
+        except APIError as exc:
+            logger.error(
+                "Live API error (session=%s): msg=%s",
+                state.session_id, exc,
+            )
+            try:
+                await ws.send_json({
+                    "type": "error",
+                    "payload": {
+                        "message": "Please disconnect and reconnect to continue.",
+                        "code": str(getattr(exc, "code", getattr(exc, "status_code", "unknown"))),
+                    },
+                })
+            except Exception:
+                pass
+        
+
+        # async for event in runner.run_live(
+        #     user_id=state.session_id,
+        #     session_id=state.session_id,
+        #     run_config=run_config,
+        #     live_request_queue=live_request_queue,
+        # ):
+        #     event_json_str = serialize_event(event)
+        #     if event_json_str:
+        #         try:
+        #             await ws.send_text(event_json_str)
+        #         except Exception:
+        #             # Connection likely closed by client already
+        #             break
+
     except Exception as exc:
         logger.exception(
             "Error in runner events (session=%s, reconnect=%s): %s",
@@ -244,7 +276,6 @@ async def _forward_runner_events(
             state.is_reconnect,
             exc,
         )
-
 
 async def _hydrate_client_workspace(ws: WebSocket, session_snapshot: dict) -> None:
     analogy_history = session_snapshot.get("analogy_history", [])

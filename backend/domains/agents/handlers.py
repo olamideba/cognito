@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import uuid4
 
 from google.adk.tools import ToolContext
 
@@ -13,26 +14,49 @@ from domains.mentor.module import (
 )
 
 
+async def _send_tool_status(status: str, tool_name: str, invocation_id: str) -> None:
+    await send_ui_envelope(
+        {
+            "type": "tool_status",
+            "payload": {
+                "status": status,
+                "tool_name": tool_name,
+                "invocation_id": invocation_id,
+            },
+        }
+    )
+
+
 async def confirm_session_goal(
     goal: str,
     time_limit_minutes: int,
     tool_context: ToolContext | None = None,
 ) -> dict:
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    result = await confirm_session_goal_module(session_id, goal, time_limit_minutes)
-    await send_ui_envelope({"type": "session_initialized", "payload": result})
-    return result
+    await _send_tool_status("start", "confirm_session_goal", invocation_id)
+    try:
+        result = await confirm_session_goal_module(session_id, goal, time_limit_minutes)
+        await send_ui_envelope({"type": "session_initialized", "payload": result})
+        return result
+    finally:
+        await _send_tool_status("end", "confirm_session_goal", invocation_id)
 
 
 async def get_session_timer(
     tool_context: ToolContext | None = None,
 ) -> dict:
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    return await get_session_timer_module(session_id)
+    await _send_tool_status("start", "get_session_timer", invocation_id)
+    try:
+        return await get_session_timer_module(session_id)
+    finally:
+        await _send_tool_status("end", "get_session_timer", invocation_id)
 
 
 async def generate_analogy_visual(
@@ -42,9 +66,11 @@ async def generate_analogy_visual(
 ) -> dict:
     import asyncio
 
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
+    await _send_tool_status("start", "generate_analogy_visual", invocation_id)
 
     # Spawn image generation in the background so the model can keep talking
     async def _generate_and_push():
@@ -56,6 +82,8 @@ async def generate_analogy_visual(
             logging.getLogger(__name__).exception(
                 "Background analogy generation failed for '%s'", concept_label
             )
+        finally:
+            await _send_tool_status("end", "generate_analogy_visual", invocation_id)
 
     asyncio.create_task(_generate_and_push())
 
@@ -75,30 +103,35 @@ async def render_quiz_component(
     hint: Optional[str] = None,
     tool_context: ToolContext | None = None,
 ) -> dict:
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    result = await render_quiz_component_module(
-        session_id=session_id,
-        component_type=component_type,
-        question=question,
-        options=options,
-        correct_answer=correct_answer,
-        hint=hint,
-    )
-    await send_ui_envelope(
-        {
-            "type": "quiz_component",
-            "payload": {
-                "component_id": result["component_id"],
-                "component_type": result["component_type"],
-                "question": result["question"],
-                "options": result["options"],
-                "hint": result["hint"],
+    await _send_tool_status("start", "render_quiz_component", invocation_id)
+    try:
+        result = await render_quiz_component_module(
+            session_id=session_id,
+            component_type=component_type,
+            question=question,
+            options=options,
+            correct_answer=correct_answer,
+            hint=hint,
+        )
+        await send_ui_envelope(
+            {
+                "type": "quiz_component",
+                "payload": {
+                    "component_id": result["component_id"],
+                    "component_type": result["component_type"],
+                    "question": result["question"],
+                    "options": result["options"],
+                    "hint": result["hint"],
+                },
             },
-        }
-    )
-    return result
+        )
+        return result
+    finally:
+        await _send_tool_status("end", "render_quiz_component", invocation_id)
 
 
 async def submit_quiz_answer(
@@ -106,20 +139,25 @@ async def submit_quiz_answer(
     answer: str,
     tool_context: ToolContext | None = None,
 ) -> dict:
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    result = await submit_quiz_answer_module(session_id, component_id, answer)
-    await send_ui_envelope(
-        {
-            "type": "quiz_answer_result",
-            "payload": {
-                "component_id": component_id,
-                "is_correct": result.get("is_correct", False),
+    await _send_tool_status("start", "submit_quiz_answer", invocation_id)
+    try:
+        result = await submit_quiz_answer_module(session_id, component_id, answer)
+        await send_ui_envelope(
+            {
+                "type": "quiz_answer_result",
+                "payload": {
+                    "component_id": component_id,
+                    "is_correct": result.get("is_correct", False),
+                },
             },
-        }
-    )
-    return result
+        )
+        return result
+    finally:
+        await _send_tool_status("end", "submit_quiz_answer", invocation_id)
 
 
 async def update_flow_meter(
@@ -128,17 +166,22 @@ async def update_flow_meter(
     note: Optional[str] = None,
     tool_context: ToolContext | None = None,
 ) -> dict:
+    invocation_id = str(uuid4())
     session_id = require_session_id()
     if not session_id:
         return {"error": "Session context not available"}
-    result = await update_flow_meter_module(session_id, signal_type, delta, note)
-    await send_ui_envelope(
-        {
-            "type": "flow_update",
-            "payload": {
-                "flow_score": result.get("new_flow_score"),
-                "delta": int(delta),
+    await _send_tool_status("start", "update_flow_meter", invocation_id)
+    try:
+        result = await update_flow_meter_module(session_id, signal_type, delta, note)
+        await send_ui_envelope(
+            {
+                "type": "flow_update",
+                "payload": {
+                    "flow_score": result.get("new_flow_score"),
+                    "delta": int(delta),
+                },
             },
-        }
-    )
-    return result
+        )
+        return result
+    finally:
+        await _send_tool_status("end", "update_flow_meter", invocation_id)

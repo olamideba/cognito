@@ -8,6 +8,7 @@ import {
   MicOff,
   MonitorStop,
   MonitorUp,
+  LoaderCircle,
 } from "lucide-react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
@@ -25,6 +26,7 @@ export type ControlTrayProps = {
   screenCapture: UseMediaStreamResult;
   muted: boolean;
   setMuted: (muted: boolean) => void;
+  activeToolLabel?: string | null;
 };
 
 function ControlTray({
@@ -38,6 +40,7 @@ function ControlTray({
   screenCapture,
   muted,
   setMuted,
+  activeToolLabel = null,
 }: ControlTrayProps) {
   const videoStreams = [webcam, screenCapture];
   const [activeVideoStream, setActiveVideoStream] =
@@ -194,6 +197,15 @@ function ControlTray({
         )}
         {children}
       </nav>
+
+      <div className="control-bar-center" aria-live="polite">
+        {activeToolLabel ? (
+          <div className="tool-call-status">
+            <LoaderCircle size={18} className="tool-call-status__spinner" />
+            <span className="brutalist-body">Running: {activeToolLabel}</span>
+          </div>
+        ) : null}
+      </div>
 
       <div className="control-bar-right">
         <div className="flow-state-meter">

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GenAILiveClient } from "../lib/genai-live-client";
+import { GenAILiveClient, LiveClientCloseEvent } from "../lib/genai-live-client";
 import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
@@ -23,6 +23,8 @@ import VolMeterWorket from "../lib/worklets/vol-meter";
 import { LiveConnectConfig } from "@google/genai";
 
 const SESSION_ID_KEY = "cognito_session_id";
+const MAX_AUTO_RECONNECT_ATTEMPTS = 3;
+const AUTO_RECONNECT_DELAY_MS = 1500;
 
 export type UseLiveAPIResults = {
   client: GenAILiveClient;
@@ -34,6 +36,7 @@ export type UseLiveAPIResults = {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   volume: number;
+  isReconnecting: boolean;
 };
 
 export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
@@ -46,6 +49,20 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const [config, setConfig] = useState<LiveConnectConfig>({});
   const [connected, setConnected] = useState(false);
   const [volume, setVolume] = useState(0);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const autoReconnectEnabledRef = useRef(false);
+  const modelRef = useRef(model);
+  const configRef = useRef(config);
+
+  useEffect(() => {
+    modelRef.current = model;
+  }, [model]);
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   // Wire up the audio-out streamer once.
   useEffect(() => {
@@ -65,8 +82,55 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
 
   // Subscribe to client events.
   useEffect(() => {
-    const onOpen = () => setConnected(true);
-    const onClose = () => setConnected(false);
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    const resetReconnectState = () => {
+      clearReconnectTimer();
+      reconnectAttemptsRef.current = 0;
+      setIsReconnecting(false);
+    };
+
+    const scheduleReconnect = () => {
+      if (!autoReconnectEnabledRef.current) {
+        resetReconnectState();
+        return;
+      }
+
+      if (reconnectAttemptsRef.current >= MAX_AUTO_RECONNECT_ATTEMPTS) {
+        setIsReconnecting(false);
+        return;
+      }
+
+      reconnectAttemptsRef.current += 1;
+      setIsReconnecting(true);
+      clearReconnectTimer();
+
+      reconnectTimerRef.current = window.setTimeout(async () => {
+        const success = await client.connect(modelRef.current, configRef.current);
+        if (!success) {
+          scheduleReconnect();
+        }
+      }, AUTO_RECONNECT_DELAY_MS);
+    };
+
+    const onOpen = () => {
+      setConnected(true);
+      resetReconnectState();
+    };
+    const onClose = ({ intentional }: LiveClientCloseEvent) => {
+      setConnected(false);
+      audioStreamerRef.current?.stop();
+      if (intentional) {
+        resetReconnectState();
+        return;
+      }
+      scheduleReconnect();
+    };
     const onError = (error: ErrorEvent) => console.error("error", error);
     const onSessionCreated = (sessionId: string) => {
       try {
@@ -88,6 +152,8 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       .on("audio", onAudio);
 
     return () => {
+      autoReconnectEnabledRef.current = false;
+      resetReconnectState();
       client
         .off("error", onError)
         .off("open", onOpen)
@@ -100,6 +166,13 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   }, [client]);
 
   const connect = useCallback(async () => {
+    autoReconnectEnabledRef.current = true;
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    setIsReconnecting(false);
     client.disconnect();
     // model/config params are accepted by the client for API compat but the
     // proxy already owns the real config; pass them through anyway.
@@ -107,6 +180,13 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   }, [client, config, model]);
 
   const disconnect = useCallback(async () => {
+    autoReconnectEnabledRef.current = false;
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    setIsReconnecting(false);
     audioStreamerRef.current?.stop();
     client.disconnect();
     setConnected(false);
@@ -122,5 +202,6 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
     connect,
     disconnect,
     volume,
+    isReconnecting,
   };
 }
