@@ -19,6 +19,7 @@ import type {
   QuizComponentPayload,
   FlowUpdatePayload,
   ErrorPayload,
+  ToolStatusPayload,
 } from "./lib/ws-envelope";
 import { useLiveAPIContext } from "./contexts/LiveAPIContext";
 import { useLoggerStore } from "./lib/store-logger";
@@ -78,10 +79,15 @@ function buildWsUrl(): string {
   return url.toString();
 }
 
+function formatToolName(name: string): string {
+  return name.replace(/[_-]+/g, " ").trim();
+}
+
 type BackendState = "loading" | "ready" | "error";
 
 // Inner component that has access to LiveAPIContext
 export function AppInner() {
+  const TOOL_STATUS_MIN_VISIBLE_MS = 2000;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [_videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
@@ -111,6 +117,9 @@ export function AppInner() {
   const [hasNewQuiz, setHasNewQuiz] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [activeToolCalls, setActiveToolCalls] = useState<Record<string, string>>({});
+  const toolStatusShownAtRef = useRef<number>(0);
+  const toolStatusClearTimerRef = useRef<number | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -118,7 +127,14 @@ export function AppInner() {
   const screenCapture = useScreenCapture();
   const [muted, setMuted] = useState(false);
 
-  const { client, connected, connect, disconnect } = useLiveAPIContext();
+  const { client, connected, connect, disconnect, isReconnecting } = useLiveAPIContext();
+  const activeToolNames = Object.values(activeToolCalls);
+  const activeToolLabel =
+    activeToolNames.length === 0
+      ? null
+      : activeToolNames.length === 1
+        ? formatToolName(activeToolNames[0])
+        : `${formatToolName(activeToolNames[0])} (+${activeToolNames.length - 1})`;
   const transcriptPlaceholder = connected
     ? "Optionally send a message ..."
     : "Connect voice to enable chat";
@@ -196,6 +212,38 @@ export function AppInner() {
 
   // Subscribe to envelope events
   useEffect(() => {
+    const clearPendingTimer = () => {
+      if (toolStatusClearTimerRef.current !== null) {
+        window.clearTimeout(toolStatusClearTimerRef.current);
+        toolStatusClearTimerRef.current = null;
+      }
+    };
+
+    const clearActiveToolCallsNow = () => {
+      clearPendingTimer();
+      setActiveToolCalls({});
+      toolStatusShownAtRef.current = 0;
+    };
+
+    const clearActiveToolCallsWithMinVisibility = () => {
+      const shownAt = toolStatusShownAtRef.current;
+      if (!shownAt) {
+        clearActiveToolCallsNow();
+        return;
+      }
+      const elapsed = Date.now() - shownAt;
+      const remaining = Math.max(0, TOOL_STATUS_MIN_VISIBLE_MS - elapsed);
+      clearPendingTimer();
+      if (remaining === 0) {
+        clearActiveToolCallsNow();
+        return;
+      }
+      toolStatusClearTimerRef.current = window.setTimeout(
+        clearActiveToolCallsNow,
+        remaining
+      );
+    };
+
     const onEnvelope = (envelope: CognitoEnvelope) => {
       switch (envelope.type) {
         case "session_created":
@@ -257,6 +305,30 @@ export function AppInner() {
           break;
         }
 
+        case "tool_status": {
+          const t = envelope.payload as ToolStatusPayload;
+          if (t.status === "start") {
+            clearPendingTimer();
+            if (toolStatusShownAtRef.current === 0) {
+              toolStatusShownAtRef.current = Date.now();
+            }
+            setActiveToolCalls((prev) => ({
+              ...prev,
+              [t.invocation_id]: t.tool_name,
+            }));
+          } else {
+            setActiveToolCalls((prev) => {
+              const next = { ...prev };
+              delete next[t.invocation_id];
+              if (Object.keys(next).length === 0) {
+                clearActiveToolCallsWithMinVisibility();
+              }
+              return next;
+            });
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -264,6 +336,7 @@ export function AppInner() {
 
     client.on("envelope", onEnvelope);
     return () => {
+      clearActiveToolCallsNow();
       client.off("envelope", onEnvelope);
     };
   }, [client]);
@@ -287,6 +360,22 @@ export function AppInner() {
       client.off("log", log);
     };
   }, [client, log]);
+
+  // Clear tool status on disconnect.
+  useEffect(() => {
+    const onClose = () => {
+      if (toolStatusClearTimerRef.current !== null) {
+        window.clearTimeout(toolStatusClearTimerRef.current);
+        toolStatusClearTimerRef.current = null;
+      }
+      setActiveToolCalls({});
+      toolStatusShownAtRef.current = 0;
+    };
+    client.on("close", onClose);
+    return () => {
+      client.off("close", onClose);
+    };
+  }, [client]);
 
   // Text input handler
   const handleSubmit = () => {
@@ -496,7 +585,7 @@ export function AppInner() {
                 <h1 className="transcript-card__title">Session Transcript</h1>
               </div>
             </header>
-            {sessionError && (
+            {(sessionError || isReconnecting) && (
               <div style={{
                 background: "#fff3cd",
                 border: "2px solid #000",
@@ -509,7 +598,12 @@ export function AppInner() {
                 justifyContent: "space-between",
                 alignItems: "center",
               }}>
-                <span><ServerCrash size={16}/> I have encountered an issue while fulfilling your request. — {sessionError}</span>
+                <span>
+                  <ServerCrash size={16} />{" "}
+                  {isReconnecting
+                    ? "Connection dropped. Reconnecting..."
+                    : `Session Interrupted. I have encountered an issue while fulfilling your request. — ${sessionError}`}
+                </span>
                 <button
                   onClick={() => setSessionError(null)}
                   style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
@@ -687,6 +781,7 @@ export function AppInner() {
           screenCapture={screenCapture}
           muted={muted}
           setMuted={setMuted}
+          activeToolLabel={activeToolLabel}
         />
       </div>
     </div>

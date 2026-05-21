@@ -247,7 +247,7 @@ async def _forward_runner_events(
                 await ws.send_json({
                     "type": "error",
                     "payload": {
-                        "message": "Session interrupted. Please disconnect and reconnect to continue.",
+                        "message": "Please disconnect and reconnect to continue.",
                         "code": str(getattr(exc, "code", getattr(exc, "status_code", "unknown"))),
                     },
                 })

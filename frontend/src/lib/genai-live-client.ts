@@ -16,7 +16,7 @@ import { CognitoEnvelope, isCognitoEnvelope } from "./ws-envelope";
 
 export interface LiveClientEventTypes {
   audio: (data: ArrayBuffer) => void;
-  close: (event: CloseEvent) => void;
+  close: (event: LiveClientCloseEvent) => void;
   content: (data: LiveServerContent) => void;
   envelope: (envelope: CognitoEnvelope) => void;
   error: (error: ErrorEvent) => void;
@@ -32,9 +32,15 @@ export interface LiveClientEventTypes {
   turncomplete: () => void;
 }
 
+export interface LiveClientCloseEvent {
+  event: CloseEvent;
+  intentional: boolean;
+}
+
 export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
   private _url: string;
   private _ws: WebSocket | null = null;
+  private _intentionalClosePending = false;
 
   private _status: "connected" | "disconnected" | "connecting" = "disconnected";
   public get status() {
@@ -71,6 +77,7 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
   async connect(model: string, config: LiveConnectConfig): Promise<boolean> {
     if (this._status !== "disconnected") return false;
 
+    this._intentionalClosePending = false;
     this._status = "connecting";
     this._model = model;
     this.config = config;
@@ -136,19 +143,22 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
       };
 
       ws.onclose = (e: CloseEvent) => {
+        const intentional = this._intentionalClosePending;
+        this._intentionalClosePending = false;
         this._status = "disconnected";
         this._ws = null;
         this.log(
           "server.close",
           `disconnected${e.reason ? ` with reason: ${e.reason}` : ""}`
         );
-        this.emit("close", e);
+        this.emit("close", { event: e, intentional });
       };
     });
   }
 
   public disconnect() {
     if (!this._ws) return false;
+    this._intentionalClosePending = true;
     this._ws.close();
     this._ws = null;
     this._status = "disconnected";

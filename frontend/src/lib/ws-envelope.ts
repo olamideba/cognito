@@ -56,6 +56,12 @@ export type ErrorPayload = {
   code?: string;
 };
 
+export type ToolStatusPayload = {
+  status: "start" | "end";
+  tool_name: string;
+  invocation_id: string;
+};
+
 export type CognitoEnvelope =
   | { type: "session_created"; payload: SessionCreatedPayload }
   | { type: "session_initialized"; payload: SessionInitializedPayload }
@@ -65,7 +71,8 @@ export type CognitoEnvelope =
   | { type: "timer_tick"; payload: TimerTickPayload }
   | { type: "quiz_answer_result"; payload: QuizAnswerResultPayload }
   | { type: "workspace_hydrated"; payload: WorkspaceHydratedPayload }
-  | { type: "error"; payload: ErrorPayload };
+  | { type: "error"; payload: ErrorPayload }
+  | { type: "tool_status"; payload: ToolStatusPayload };
 
 export type CognitoEnvelopeType = CognitoEnvelope["type"];
 
@@ -85,6 +92,7 @@ const ENVELOPE_TYPES = new Set<string>([
   "quiz_answer_result",
   "workspace_hydrated",
   "error",
+  "tool_status",
 ]);
 
 export function isCognitoEnvelope(data: unknown): data is CognitoEnvelope {
