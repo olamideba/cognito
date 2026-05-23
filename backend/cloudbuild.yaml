@@ -5,7 +5,9 @@ steps:
       - 'build'
       - '-t'
       - 'europe-west1-docker.pkg.dev/cognio-489014/cloud-run-source-deploy/cognito-backend:$COMMIT_SHA'
-      - '.'
+      - '-f'
+      - 'backend/Dockerfile'
+      - './backend'
 
   # 2. Push the image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
