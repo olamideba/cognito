@@ -1,0 +1,31 @@
+steps:
+  # 1. Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/cognio-489014/cloud-run-source-deploy/cognito-backend:$COMMIT_SHA'
+      - '.'
+
+  # 2. Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/cognio-489014/cloud-run-source-deploy/cognito-backend:$COMMIT_SHA'
+
+  # 3. Deploy the new image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'cognito-backend'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/cognio-489014/cloud-run-source-deploy/cognito-backend:$COMMIT_SHA'
+      - '--region'
+      - 'europe-west1'
+      - '--project'
+      - 'cognio-489014'
+
+images:
+  - 'europe-west1-docker.pkg.dev/cognio-489014/cloud-run-source-deploy/cognito-backend:$COMMIT_SHA'
