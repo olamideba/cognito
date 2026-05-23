@@ -46,10 +46,11 @@ async def run_live_session(
     voice_name: Optional[str] = None,
 ) -> None:
     del browser_token
-    await ws.accept()
-    logger.info("Client connected to live session")
 
     state = await _initialize_session_state(session_id)
+
+    await ws.accept()
+    logger.info("Client connected to live session")
     register(ws, state.session_id)
     await ws.send_json(
         {

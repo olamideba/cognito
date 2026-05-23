@@ -211,13 +211,13 @@ function ControlTray({
         <div className="flow-state-meter">
           <span className="brutalist-body flow-state-meter__label">FLOW STATE:</span>
           <div className="flow-state-meter__bars">
-            {[10, 15, 20, 25, 30].map((h, i) => (
+            {[20, 40, 60, 80, 100].map((threshold, i) => (
               <div
                 key={i}
                 style={{
                   width: "12px",
-                  height: `${h}px`,
-                  backgroundColor: flowScore > i * 20 ? "black" : "transparent",
+                  height: `${10 + i * 5}px`,
+                  backgroundColor: flowScore >= threshold ? "black" : "transparent",
                   border: "3px solid black",
                   boxSizing: "border-box",
                   transition: "background-color 150ms"

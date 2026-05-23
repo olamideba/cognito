@@ -88,6 +88,7 @@ type BackendState = "loading" | "ready" | "error";
 // Inner component that has access to LiveAPIContext
 export function AppInner() {
   const TOOL_STATUS_MIN_VISIBLE_MS = 2000;
+  const [wsUrl, setWsUrl] = useState(() => buildWsUrl());
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [_videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
@@ -159,7 +160,7 @@ export function AppInner() {
             setSessionGoal(data.goal);
             setSessionTotalSeconds(data.time_limit_seconds);
             setSessionStartTime(data.start_time);
-            setFlowScore(data.flow_score || 100);
+            setFlowScore(data.flow_score ?? 0);
             if (data.status === "active") setSessionStatus("active");
 
             if (data.analogy_history) {
@@ -284,6 +285,7 @@ export function AppInner() {
 
         case "flow_update": {
           const f = envelope.payload as FlowUpdatePayload;
+          console.log("[flow_update]", f.flow_score, f.delta);
           setFlowScore(f.flow_score);
           break;
         }
