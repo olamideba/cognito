@@ -46,7 +46,7 @@ TOOL_DECLARATIONS = [
     },
     {
         "name": "render_quiz_component",
-        "description": "Renders an interactive quiz component in the Socratic Quiz tab. Use this to check the user's understanding after an explanation or when they are stuck. The component type determines the interaction format.",
+        "description": "Renders an interactive quiz component in the Socratic Quiz tab. Use this to check the user's understanding after an explanation or when they are stuck. Do not generate obvious simple questions. The component type determines the interaction format.",
         "parameters": {
             "type": "object",
             "properties": {
