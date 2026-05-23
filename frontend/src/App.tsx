@@ -86,7 +86,7 @@ function formatToolName(name: string): string {
 type BackendState = "loading" | "ready" | "error";
 
 // Inner component that has access to LiveAPIContext
-export function AppInner() {
+export function AppInner({ onReset }: { onReset: () => void }) {
   const TOOL_STATUS_MIN_VISIBLE_MS = 2000;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [_videoStream, setVideoStream] = useState<MediaStream | null>(null);
@@ -159,7 +159,7 @@ export function AppInner() {
             setSessionGoal(data.goal);
             setSessionTotalSeconds(data.time_limit_seconds);
             setSessionStartTime(data.start_time);
-            setFlowScore(data.flow_score || 100);
+            setFlowScore(data.flow_score ?? 0);
             if (data.status === "active") setSessionStatus("active");
 
             if (data.analogy_history) {
@@ -284,6 +284,7 @@ export function AppInner() {
 
         case "flow_update": {
           const f = envelope.payload as FlowUpdatePayload;
+          console.log("[flow_update]", f.flow_score, f.delta);
           setFlowScore(f.flow_score);
           break;
         }
@@ -432,12 +433,9 @@ export function AppInner() {
     setFlowScore(100);
     setActiveDrawer("none");
     setSessionId(null);
-
-    // 3. Clear session ID from storage
-    localStorage.removeItem(SESSION_ID_KEY);
-
     // 4. Close modal
     setShowResetModal(false);
+    onReset();
   };
 
   // Accessibility: Esc key and focus trap for modal
@@ -806,6 +804,8 @@ function App() {
   const pathname = useLocationPath();
   const [backendState, setBackendState] = useState<BackendState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [wsUrl, setWsUrl] = useState(() => buildWsUrl());
+
 
   const checkBackend = useCallback(() => {
     setBackendState("loading");
@@ -907,8 +907,11 @@ function App() {
 
   return (
     <div className="App">
-      <LiveAPIProvider options={{ url: buildWsUrl() }}>
-        <AppInner />
+      <LiveAPIProvider key={wsUrl} options={{ url: wsUrl }}>
+        <AppInner onReset={() => {
+          localStorage.removeItem(SESSION_ID_KEY);
+          setWsUrl(buildWsUrl());
+        }} />
       </LiveAPIProvider>
     </div>
   );

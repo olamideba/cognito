@@ -122,8 +122,11 @@ function ControlTray({
 
       // Notify the model that a new visual source is active
       const label = next.type === "screen" ? "screen" : "camera";
+      const contextNote = label === "screen"
+        ? `[Context] The user has shared their screen. You can now see what they are working on. If it is directly relevant to the current topic, acknowledge it briefly and naturally — do not interrupt the flow of the session to announce it. If the session has not started yet, simply note that you can see their screen when relevant.`
+        : `[Context] The user has enabled their camera. You can now see them. Do not comment on their appearance. You may use visual cues like body language or facial expression to inform your read on their engagement or confusion, but do not narrate this aloud. Continue the session naturally.`;
       client.send([{
-        text: `[System] The user has started sharing their ${label}. You can now see their ${label} content in the video frames being sent to you. Acknowledge this briefly and naturally.`,
+        text: contextNote,
       }]);
     } else {
       setActiveVideoStream(null);
@@ -131,7 +134,7 @@ function ControlTray({
 
       // Notify the model that visual sources have been turned off
       client.send([{
-        text: `[System] The user has stopped sharing their screen/camera. Video frames are no longer being sent.`,
+        text: `[Context] The user has stopped sharing their screen/camera. You no longer have visual context. Continue the session based on voice alone.`,
       }]);
     }
 
@@ -211,13 +214,13 @@ function ControlTray({
         <div className="flow-state-meter">
           <span className="brutalist-body flow-state-meter__label">FLOW STATE:</span>
           <div className="flow-state-meter__bars">
-            {[10, 15, 20, 25, 30].map((h, i) => (
+            {[20, 40, 60, 80, 100].map((threshold, i) => (
               <div
                 key={i}
                 style={{
                   width: "12px",
-                  height: `${h}px`,
-                  backgroundColor: flowScore > i * 20 ? "black" : "transparent",
+                  height: `${10 + i * 5}px`,
+                  backgroundColor: flowScore >= threshold ? "black" : "transparent",
                   border: "3px solid black",
                   boxSizing: "border-box",
                   transition: "background-color 150ms"

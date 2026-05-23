@@ -51,7 +51,7 @@ def session_seed_document(
         "goal": goal,
         "time_limit_seconds": None,
         "start_time": None,
-        "flow_score": 100,
+        "flow_score": 0,
         "distraction_events": [],
         "tab_switch_count": 0,
         "inactivity_streak_seconds": 0,
