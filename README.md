@@ -4,6 +4,8 @@ A real-time multimodal learning coach built with a React frontend and a FastAPI 
 
 ## Overview
 
+> Frontend attribution: the frontend is modified and built on top of [live-api-web-console](https://github.com/google-gemini/live-api-web-console) by Google (Apache 2.0). Backend and core features are original work.
+
 This project delivers an end-to-end agentic tutoring experience:
 
 1. **Real-time session start**: Frontend connects to backend WebSocket and receives a persistent `session_id`
