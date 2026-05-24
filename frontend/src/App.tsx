@@ -147,6 +147,48 @@ export function AppInner({ onReset }: { onReset: () => void }) {
     }
   }, [connected]);
 
+  // Show Tally popup on workspace after 120 seconds.
+  useEffect(() => {
+    const formId = "KYaPJA";
+    const scriptSrc = "https://tally.so/widgets/embed.js";
+    let timeoutId: number | null = null;
+
+    const openPopup = () => {
+      const tally = (window as Window & {
+        Tally?: { openPopup: (id: string) => void };
+      }).Tally;
+      tally?.openPopup(formId);
+    };
+
+    const startDelay = () => {
+      timeoutId = window.setTimeout(() => {
+        openPopup();
+      }, 120_000);
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${scriptSrc}"]`
+    );
+
+    if (existingScript) {
+      startDelay();
+    } else {
+      const script = document.createElement("script");
+      script.src = scriptSrc;
+      script.async = true;
+      script.onload = () => {
+        startDelay();
+      };
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
   // REST Hydration on Mount
   useEffect(() => {
     const storedId = getStoredSessionId();
