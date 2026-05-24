@@ -161,10 +161,12 @@ export default function LandingPage() {
           </div>
           <div className="landing__demo-placeholder">
             <iframe
-              src="https://www.loom.com/embed/3cf7f8e72b494589a3e872a08f19e154"
+              src="https://www.youtube.com/embed/giShVfu26oE?si=nMVh6n5GcHaBni38"
               allowFullScreen
               style={{ width: "100%", height: "100%", border: "none" }}
               title="Cognito Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
             />
           </div>
         </section>
