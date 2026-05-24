@@ -1,5 +1,7 @@
 # React + TypeScript + Vite
 
+> Frontend attribution: the frontend is modified and built on top of [live-api-web-console](https://github.com/google-gemini/live-api-web-console) by Google (Apache 2.0).
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
